@@ -1,0 +1,72 @@
+{
+  "categories": {
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "",
+      "subCategories": [
+        
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/furniture/dining-room-furniture/bar-pub-tables",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "furniture",
+      "subCategories": [
+        "dining-room-furniture",
+        "bar-pub-tables"
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/outdoor-furniture/outdoor-furniture-seating/outdoor-sofas-and-loveseats",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "outdoor-furniture",
+      "subCategories": [
+        "outdoor-furniture-seating",
+        "outdoor-sofas-and-loveseats"
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/outdoor-furniture/outdoor-dining-furniture/outdoor-dining-tables",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "outdoor-furniture",
+      "subCategories": [
+        "outdoor-dining-furniture",
+        "outdoor-dining-tables"
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/home-improvement/window-treatments/curtain-rods-and-hardware",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "home-improvement",
+      "subCategories": [
+        "window-treatments",
+        "curtain-rods-and-hardware"
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/rugs/rug-style/floral-rugs",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "rugs",
+      "subCategories": [
+        "rug-style",
+        "floral-rugs"
+      ]
+    },
+    "category": {
+      "originalUrl": "https://www.mathishome.com/mathis-home/outdoor-furniture/outdoor-gardening",
+      "website": "https://www.mathishome.com",
+      "site": "mathis-home",
+      "category_name": "outdoor-furniture",
+      "subCategories": [
+        "outdoor-gardening"
+      ]
+    }
+  }
+}

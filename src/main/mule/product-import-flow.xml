@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+
+	<!-- HTTP Listener Configuration -->
+
+	<!-- Database Configuration -->
+
+	<!-- Flow: Product Import with Validation -->
+	<flow name="product-import-flow" doc:id="c3d4e5f6-g7h8-9012-cdef-345678901234" >
+		<http:listener doc:name="Listener" doc:id="d4e5f6g7-h8i9-0123-defg-456789012345" path="/products/import" config-ref="HTTP_Listener_config" allowedMethods="POST">
+			<http:response >
+				<http:body ><![CDATA[#[%dw 2.0
+output application/json
+---
+payload]]]></http:body>
+			</http:response>
+			<http:error-response >
+				<http:body ><![CDATA[#[%dw 2.0
+output application/json
+---
+payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		
+
+		<!-- Global error handling -->
+		<logger level="INFO" doc:name="Payload Logger" doc:id="a2ba7fe7-991b-48db-a566-10d89767fd38" message="Starting /products/import with payload: #[payload]"/>
+		<choice doc:name="Choice" doc:id="a5161976-193e-4ee4-b6e0-0d2945be0a82" >
+			<when expression="#[payload is Array]">
+				<parallel-foreach doc:name="Parallel For Each" doc:id="86aa25d5-13ba-4590-9949-dbcf2acb8a7e" collection="#[payload]">
+					<flow-ref doc:name="Flow Reference" doc:id="f0d02878-9433-4801-ad1f-4b43eade1d3f" name="product-process-import" />
+				</parallel-foreach>
+				<ee:transform doc:name="Transform Message" doc:id="50d3430b-2b17-4f35-9242-3c61c62d1e9a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="Flow Reference" doc:id="96bf8d28-d3c4-43dd-b056-9f5a6b497625" name="product-process-import"/>
+				<ee:transform doc:name="Transform Message" doc:id="92146f5f-b196-42cd-8703-3049d9b5083d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+[payload]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="error-handler" type="ANY">
+				<ee:transform doc:name="Error Response" doc:id="error-response">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"success": false,
+	"error": error.description,
+	"message": "Failed to import product"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<sub-flow name="product-process-import" doc:id="183d9f10-f0bb-46e8-9a16-c6c6c6f38add" >
+		<!-- Store original payload for later use -->
+		<set-variable value="#[payload]" doc:name="Store Original Payload" doc:id="c0b5d41f-adf8-418a-a587-eba7e60f1bfb" variableName="originalPayload"/>
+
+		<!-- Validate required fields -->
+		<ee:transform doc:name="Validate Input" doc:id="c165309d-ac68-4262-a4d9-46283aa2acab">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var productData = payload
+
+// Validation checks
+var validationErrors = []
+
+// Required fields validation
+fun validate() =
+	if (isEmpty(productData.product_name)) 
+		validationErrors + "product_name is required"
+	else
+	if (isEmpty(productData.sku)) 
+		validationErrors + "sku is required"
+	else
+	if (isEmpty(productData.brand)) 
+		validationErrors + "brand is required"
+	else
+	if (isEmpty(productData.pricing.price)) 
+		validationErrors + "pricing.price is required"
+	else
+		validationErrors + "pricing.price is required"
+// Check if SKU already exists (this would be done in a separate database call)
+// For now, we'll assume it's unique
+---
+if (sizeOf(validationErrors) > 0) 
+	// Return validation errors
+	{
+		"valid": false,
+		"errors": validationErrors
+	}
+ else 
+	// Return validated data
+	{
+		"valid": true,
+		"data": productData
+	}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+		<!-- Check validation result -->
+		<choice doc:name="Validation Check" doc:id="d3b1c403-2280-4882-8251-b3fa8fa6e89d">
+			<when expression="#[payload.valid == false]">
+				<ee:transform doc:name="Validation Error Response" doc:id="ef470a75-93ec-45bb-b68e-91144136be91">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"success": false,
+	"error": "Validation failed",
+	"validation_errors": payload.errors
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<raise-error doc:name="Raise error" doc:id="e071563d-8bc1-454b-9a43-e983b11d55b7" type="ANY:VALIDATION" description='#[payload.validation_errors joinBy ", "]'/>
+			</when>
+			<otherwise>
+				<!-- Transform validated data to database format -->
+				<ee:transform doc:name="Transform Product Data" doc:id="cf399f6a-a229-4cbf-866c-fd21563a5fa6">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var productData = payload.data
+---
+{
+	"name": productData.product_name,
+	"price": (productData.pricing.price replace(/\$|,/) with "") as Number default 0,
+	"category": productData.category default "General",
+	"stock": productData.stock as Number default 0, // Default stock
+	"sku": productData.sku,
+	"brand": productData.brand,
+	"collection": productData.collection,
+	"description": productData.description default "",
+	"dimensions": productData.dimensions.dimensions default "",
+	"weight": null, // Not provided in input
+	"main_image_url": productData.images.main_image_url default "",
+	"is_active": true,
+	"featured": false,
+	"sort_order": 0,
+	"warranty": productData.warranty,
+	"care" : productData.care_instructions,
+	"color" : productData.color,
+	"product_type": productData.product_type,
+	"sf_id": productData.sf_id as String default ""
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+
+				<!-- Check if SKU already exists -->
+				<set-variable value="#[payload]" doc:name="Set Variable" doc:id="641e6e87-e2b6-463f-ae08-e5d3f09a8c1a" variableName="product"/>
+				<db:select doc:name="Check SKU Exists" doc:id="236d96b1-5523-4dd5-81d2-176965bc15d9" config-ref="Database_Config">
+					<db:sql><![CDATA[SELECT id FROM products WHERE sku = :sku]]></db:sql>
+					<db:input-parameters><![CDATA[#[{
+	sku: payload.sku
+}]]]></db:input-parameters>
+				</db:select>
+
+				<!-- Handle SKU conflict -->
+				<choice doc:name="SKU Check" doc:id="b009edfa-89fc-4880-9c36-41319018e4dd">
+					<when expression="#[sizeOf(payload) > 0]">
+						<ee:transform doc:name="SKU Conflict Response" doc:id="6359db63-a357-4d33-8eec-eecefc28647a">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"success": false,
+	"error": "SKU already exists",
+	"message": "Product with SKU '" ++ vars.originalPayload.sku ++ "' already exists in the database"
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<raise-error doc:name="Raise error" doc:id="8f620a56-fde3-4530-98a8-c0b2f315ec1e" type="ANY:VALIDATION" description="#[payload.message]" />
+					</when>
+					<otherwise>
+						<!-- Insert into products table -->
+						<logger level="INFO" doc:name="Logger" doc:id="d4cda785-902a-4f9d-b278-bf2d20ed5182" message="Product to insert #[output application/json --- vars.product]"/>
+						<db:insert doc:name="Insert Product" doc:id="f3d3b743-8b02-4eb8-8a27-10aaebcab697" config-ref="Database_Config" autoGenerateKeys="true">
+							<db:sql><![CDATA[INSERT INTO products ("name", price, category, stock, sku, brand, collection, description, dimensions, weight, main_image_url, is_active, featured, sort_order, warranty_info, care_instructions, color, product_type, sf_id) 
+VALUES (:name, :price, :category, :stock, :sku, :brand, :collection, :description, :dimensions, :weight, :main_image_url, :is_active, :featured, :sort_order, :warranty, :care, :color, :product_type, :sf_id) 
+RETURNING id]]></db:sql>
+							<db:input-parameters ><![CDATA[#[vars.product]]]></db:input-parameters>
+						</db:insert>
+
+						<!-- Store product ID for subsequent operations -->
+						<logger level="DEBUG" doc:name="Log Response" doc:id="b4de1af5-407e-4cf1-b2e3-289cb966bf91" message="Response from Insert: #[%dw 2.0 output application/json --- payload]" />
+						<set-variable value="#[payload.generatedKeys.id]" doc:name="Set Product ID" doc:id="008a24df-2683-433e-a05e-1c940eac6d07" variableName="productId"/>
+
+						<!-- Insert product images if they exist -->
+						<choice doc:name="Has Images" doc:id="25be3e90-3e1b-4b1c-8cf7-da539e57b19d">
+							<when expression="#[vars.originalPayload.dimensions.images.main_image_url != null and vars.originalPayload.dimensions.images.main_image_url != '']">
+								<ee:transform doc:name="Transform Images" doc:id="cf93ee88-26b4-4f47-8c11-aa5cb4ff8d6e">
+									<ee:message>
+										<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var productData = vars.originalPayload
+var productId = vars.productId
+
+// Main image
+var mainImage = {
+	"product_id": productId,
+	"image_url": productData.dimensions.images.main_image_url,
+	"alt_text": productData.dimensions.images.alt_text default "",
+	"is_primary": true,
+	"sort_order": 0
+}
+
+// Additional images
+var additionalImages = productData.dimensions.images.additional_images default [] map (image, index) -> {
+	"product_id": productId,
+	"image_url": image.url,
+	"alt_text": image.alt_text default "",
+	"is_primary": false,
+	"sort_order": index + 1
+}
+---
+// Combine all images
+[mainImage] ++ additionalImages]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+
+								<!-- Insert product images -->
+								<foreach doc:name="Insert Images" doc:id="b1470130-f4ee-4ab9-bf8e-0a343d0b323a">
+									<db:insert config-ref="Database_Config">
+										<db:sql><![CDATA[INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order) 
+VALUES (:product_id, :image_url, :alt_text, :is_primary, :sort_order)]]></db:sql>
+										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+									</db:insert>
+									<logger level="DEBUG" doc:name="Log Response" doc:id="7f08ca59-a8b0-4593-b471-1ef96d909f25" message="Response from Insert Images: #[payload]" />
+								</foreach>
+							</when>
+						</choice>
+
+						<!-- Insert product features if they exist -->
+						<choice doc:name="Has Features" doc:id="33e1cd27-d699-405f-a6cf-bfc2b2e8a067">
+							<when expression="#[sizeOf(vars.originalPayload.dimensions.features default []) > 0 or sizeOf(vars.originalPayload.dimensions.materials default []) > 0 or sizeOf(vars.originalPayload.dimensions.finish default []) > 0]">
+								<ee:transform doc:name="Transform Features" doc:id="76d7e44f-7480-44d2-8e0f-affeb17a3702">
+									<ee:message>
+										<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+
+var productData = vars.originalPayload
+var productId = vars.productId
+
+// Extract features from dimensions
+var dimensionFeatures = productData.dimensions.features default [] map (feature) -> {
+	"product_id": productId,
+	"feature_name": feature[0],
+	"feature_value": feature[1]
+}
+
+// Extract materials
+var materialFeatures = productData.dimensions.materials default [] map (material) -> {
+	"product_id": productId,
+	"feature_name": "Material: " ++ material[0],
+	"feature_value": material[1]
+}
+
+// Extract finish
+var finishFeatures = productData.dimensions.finish default [] map (finish) -> {
+	"product_id": productId,
+	"feature_name": "Finish: " ++ finish[0],
+	"feature_value": finish[1]
+}
+
+// Extract special features
+var specialFeatures = productData.dimensions.special_features default [] map (feature, index) -> {
+	"product_id": productId,
+	"feature_name": "Special Feature " ++ (index + 1),
+	"feature_value": feature
+}
+---
+// Combine all features
+dimensionFeatures ++ materialFeatures ++ finishFeatures ++ specialFeatures]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+
+								<!-- Insert product features -->
+								<foreach doc:name="Insert Features" doc:id="f7c4d652-3df0-4692-9680-271fe7cb070f">
+									<db:insert config-ref="Database_Config">
+										<db:sql><![CDATA[INSERT INTO product_features (product_id, feature_name, feature_value) 
+VALUES (:product_id, :feature_name, :feature_value)]]></db:sql>
+										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+									</db:insert>
+									<logger level="DEBUG" doc:name="Log Response" doc:id="b3c4f1f8-1bfb-4b9b-801a-61f31309c6e3" message="Response from Insert Features: #[payload]" />
+								</foreach>
+							</when>
+						</choice>
+
+						<!-- Return success response -->
+						<ee:transform doc:name="Success Response" doc:id="55972fda-a46e-4c58-aed3-da29b176131b">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"success": true,
+	"message": "Product imported successfully",
+	"product_id": vars.productId,
+	"product_name": vars.originalPayload.product_name,
+	"sku": vars.originalPayload.sku,
+	"brand": vars.originalPayload.brand
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</otherwise>
+		</choice>
+
+	</sub-flow>
+
+</mule>

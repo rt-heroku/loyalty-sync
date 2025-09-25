@@ -1,0 +1,86 @@
+[
+    {
+        "product_name": "Meridian Elite Carry-On",
+        "product_type": "Carry-On Suitcase",
+        "collection": "Meridian Collection",
+        "brief_description": "A premium hard-shell carry-on featuring aircraft-grade aluminum construction and silent-glide wheels. Designed for the discerning traveler who values both security and effortless mobility.",
+        "key_features": [
+            "TSA-approved combination lock with biometric backup",
+            "360° silent spinner wheels with Japanese bearings",
+            "Expandable compartment (+20% capacity)",
+            "Built-in USB-C charging port",
+            "Lifetime wheel replacement guarantee",
+            "Compression zippers for maximum packing efficiency"
+        ],
+        "materials": "Aircraft-grade aluminum shell, Italian leather trim, Japanese YKK Aquaguard zippers",
+        "colors": [
+            "Midnight Black (#1C1C1C)",
+            "Champagne Gold (#D4AF37)",
+            "Storm Grey (#708090)"
+        ],
+        "dimensions": "22\" x 14\" x 9\" (56 x 36 x 23 cm)",
+        "weight": "7.2 lbs (3.3 kg)",
+        "warranty_information": "10-year comprehensive warranty with lifetime wheel replacement",
+        "care_instructions": "Wipe clean with damp cloth. Condition leather trim monthly with provided leather care kit.",
+        "images": [
+            "luxury aluminum suitcase carry-on travel",
+            "premium hard shell luggage wheels"
+        ]
+    },
+    {
+        "product_name": "Atlas Expedition Duffel",
+        "product_type": "Travel Duffel Bag",
+        "collection": "Atlas Adventure Series",
+        "brief_description": "An ultra-durable weekender crafted from ballistic nylon with waterproof construction. Perfect for luxury adventure travel where style meets uncompromising functionality.",
+        "key_features": [
+            "Fully waterproof with welded seams",
+            "Convertible backpack straps (removable)",
+            "Separate shoe compartment with ventilation",
+            "RFID-blocking pocket for documents",
+            "Lifetime repair service",
+            "Compression straps for versatile packing"
+        ],
+        "materials": "1680D ballistic nylon, full-grain leather accents, waterproof YKK AquaSeal zippers",
+        "colors": [
+            "Obsidian Black (#0B0B0B)",
+            "Cognac Brown (#A0522D)",
+            "Navy Midnight (#191970)"
+        ],
+        "dimensions": "24\" x 12\" x 12\" (61 x 30 x 30 cm)",
+        "weight": "3.8 lbs (1.7 kg)",
+        "warranty_information": "Lifetime craftsmanship warranty with complimentary annual maintenance",
+        "care_instructions": "Machine washable on gentle cycle. Air dry only. Treat leather with provided conditioner every 6 months.",
+        "images": [
+            "luxury duffel bag ballistic nylon travel",
+            "premium weekender bag leather trim"
+        ]
+    },
+    {
+        "product_name": "Constellation Jewelry Case",
+        "product_type": "Travel Jewelry Organizer",
+        "collection": "Constellation Accessories",
+        "brief_description": "An exquisitely crafted jewelry travel case with individual compartments and anti-tarnish lining. Features a sophisticated locking mechanism and plush interior organization system.",
+        "key_features": [
+            "Anti-tarnish silver cloth lining",
+            "Individual ring rolls and necklace hooks",
+            "Hidden mirror with LED lighting",
+            "Biometric fingerprint lock",
+            "Shock-absorbing foam construction",
+            "Compact design fits in carry-on"
+        ],
+        "materials": "Premium saffiano leather exterior, anti-tarnish fabric lining, brass hardware",
+        "colors": [
+            "Rose Gold (#E8B4B8)",
+            "Jet Black (#343434)",
+            "Pearl White (#F8F8FF)"
+        ],
+        "dimensions": "8\" x 6\" x 3\" (20 x 15 x 8 cm)",
+        "weight": "1.2 lbs (0.5 kg)",
+        "warranty_information": "5-year warranty on lock mechanism, lifetime leather craftsmanship guarantee",
+        "care_instructions": "Clean exterior with leather cleaner. Interior can be wiped with dry microfiber cloth only.",
+        "images": [
+            "luxury jewelry travel case leather",
+            "premium jewelry organizer compartments"
+        ]
+    }
+]

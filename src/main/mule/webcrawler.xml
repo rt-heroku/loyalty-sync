@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="webcrawlerFlow" doc:id="98abec04-a340-47e2-82da-d4eadb83f743" >
+		<http:listener doc:name="Listener" doc:id="1ccec880-c680-4c8a-afed-b3758be3dffe" config-ref="HTTP_Listener_config" path="/wc/data"/>
+		<http:request method="GET" doc:name="Request" doc:id="fe9cb572-aba7-43a2-ae1f-3559e75e97cd" config-ref="HTTP_Request_configuration" url="https://www.tumi.com/robots.txt"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7ca650ad-a4f5-495d-bf9e-f23374119bc7" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="2706b991-34c4-417d-8131-5c7cc4e920ff" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+import * from dw::core::Strings
+
+// --- helpers (no do/--- anywhere) ---
+fun stripComments(l:String) = trim(l replace /\s*#.*$/ with "")
+
+// "Key: value" → {key, value} (key uppercased). Returns null if not a k:v line.
+fun parseLine(l:String) =
+  if ((l as String) contains ":")
+  {
+    key: upper(trim((l splitBy ":")[0])),
+    value: trim(((l splitBy ":")[1 to -1]) joinBy ":")
+  }
+  else null
+
+// Ensure UA group exists
+fun withGroup(acc, ua) =
+  if ((acc.rulesByAgent[ua] default null) != null) acc
+  else acc ++ {
+    rulesByAgent: (acc.rulesByAgent default {}) ++ {
+      (ua): {
+        userAgent: ua,
+        rules: {
+          allow: [],
+          disallow: [],
+          crawl_delay: 0,
+          request_rate: "",
+          visit_time: ""
+        }
+      }
+    }
+  }
+
+// Set one rule for one UA
+fun setRule(acc, ua, k, v) =
+  withGroup(acc, ua) ++ {
+    rulesByAgent:
+      (withGroup(acc, ua).rulesByAgent) ++ {
+        (ua):
+          (withGroup(acc, ua).rulesByAgent[ua]) ++ {
+            rules:
+              (withGroup(acc, ua).rulesByAgent[ua].rules) ++
+              (
+                if (k == "ALLOW")        { allow:     (withGroup(acc, ua).rulesByAgent[ua].rules.allow)    ++ [ v ] }
+                else if (k == "DISALLOW"){ disallow:  (withGroup(acc, ua).rulesByAgent[ua].rules.disallow) ++ [ v ] }
+                else if (k == "CRAWL-DELAY")  { crawl_delay: (v as Number {format:"###"}) default 0 }
+                else if (k == "REQUEST-RATE") { request_rate: v }
+                else if (k == "VISIT-TIME")   { visit_time:  v }
+                else {}
+              )
+          }
+      }
+  }
+
+// Apply a rule to all current agents
+fun applyRule(acc, agents, k, v) =
+  if (isEmpty(agents)) acc
+  else agents reduce ((ua, a2 = acc) -> setRule(a2, ua, k, v))
+
+// --- MAIN ---
+// Keep blanks as separators, then turn each row into a token:
+//   {sep:true} for blank separators
+//   {key,value} for directives
+//   {unk:true} for anything else (ignored)
+var tokens =
+  (payload as String)
+    splitBy /\r?\n/
+    map ((s) -> stripComments(s))
+    map ((l) ->
+      if (l == "") { sep: true }
+      else (parseLine(l) default { unk: true })
+    )
+var ts = (tokens filter (item) -> item.key == "SITEMAP") 
+
+var acc =
+  tokens reduce ((tok, a = {
+    agents: [],           // current UA group (internal)
+    rulesByAgent: {},     // UA -> rules
+    sitemaps: [],         // global
+    prevWasUA: false      // whether previous directive was USER-AGENT
+  }) ->
+    if ((tok.sep default false) == true)
+      // blank line ends current UA group
+      a ++ { agents: [], prevWasUA: false }
+    else if ((tok.key default "") == "USER-AGENT")
+      a ++ {
+        agents: if (a.prevWasUA) (a.agents ++ [ tok.value ]) else [ tok.value ],
+        prevWasUA: true
+      }
+    else if ((tok.key default "") == "ALLOW")
+      (applyRule(a, a.agents, "ALLOW", tok.value)) ++ { prevWasUA: false }
+    else if ((tok.key default "") == "DISALLOW")
+      (applyRule(a, a.agents, "DISALLOW", tok.value)) ++ { prevWasUA: false }
+    else if ((tok.key default "") == "CRAWL-DELAY")
+      (applyRule(a, a.agents, "CRAWL-DELAY", tok.value)) ++ { prevWasUA: false }
+    else if ((tok.key default "") == "REQUEST-RATE")
+      (applyRule(a, a.agents, "REQUEST-RATE", tok.value)) ++ { prevWasUA: false }
+    else if ((tok.key default "") == "VISIT-TIME")
+      (applyRule(a, a.agents, "VISIT-TIME", tok.value)) ++ { prevWasUA: false }
+    else if ((tok.key default "") == "SITEMAP")
+      a ++ { sitemaps: (a.sitemaps default []) ++ [ tok.value ], prevWasUA: false }
+    else
+      a
+  )
+
+// Emit clean JSON only (no internal state)
+---
+{
+//ac2:ac2,
+//    acc:acc,
+sitemaps:ts.value
+//  groups: acc.rulesByAgent pluck $
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="72758248-8557-45a6-a354-d42293e09fc8" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload]"/>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="cf7f3c96-ad28-446a-a9ff-1823b30e1828" collection="#[payload.sitemaps]">
+			<logger level="INFO" doc:name="Logger" doc:id="b01421b6-5fde-4eae-b610-4b92503a35f6" message="#[payload]"/>
+			<http:request method="GET" doc:name="Request" doc:id="f5e991a1-ddcc-4810-aae5-f5dc18d570ba" config-ref="HTTP_Request_configuration" url="#[payload]" followRedirects="true"/>
+			<logger level="INFO" doc:name="Logger" doc:id="88cec732-ac8c-4470-9de1-7befe12e8245" message="#[payload]"/>
+			<ee:transform doc:name="Transform Message" doc:id="da3abcbd-4807-4f92-8ef0-3b40b6f99abf" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message" doc:id="719414d6-dd1f-4be0-8609-71827db96a83" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

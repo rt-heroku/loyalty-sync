@@ -1,0 +1,147 @@
+[
+    {
+        "ProductCategory": {
+            "Id": "0ZGHo000000hpTqOAI",
+            "type": "ProductCategory",
+            "Catalog": {
+                "Id": "0ZSHo000000ddOcOAI",
+                "type": "ProductCatalog",
+                "Name": "Tumi"
+            },
+            "Name": "Portfolios"
+        },
+        "IsPrimaryCategory": "false",
+        "Product": {
+            "Description": "Carry what you need in style for daily commutes or as a personal item when you fly. This elevated messenger includes thoughtfully placed pockets to carry and organize your laptop, work documents, and more",
+            "Image_URL__c": null,
+            "Inventory_Level__c": null,
+            "External_ID__c": "15",
+            "StockKeepingUnit": "TUM-ACC-001",
+            "Id": null,
+            "Item_Short_Description__c": null,
+            "type": "Product2",
+            "Name": "Harrison Nylon Portfolio",
+            "Warranty__c": "Not Available"
+        },
+        "ProductId": "01tHo000004zTtqIAE",
+        "Id": "0ZRHo000000hwiWOAQ",
+        "type": "ProductCategoryProduct",
+        "Name": "00001652"
+    },
+    {
+        "ProductCategory": {
+            "Id": "0ZGHo000000hpPTOAY",
+            "type": "ProductCategory",
+            "Catalog": {
+                "Id": "0ZSHo000000ddOcOAI",
+                "type": "ProductCatalog",
+                "Name": "Tumi"
+            },
+            "Name": "Backpacks"
+        },
+        "IsPrimaryCategory": "false",
+        "Product": {
+            "Description": "This compact backpack with a streamlined silhouette has smart organization for commuting and travel gear, as well as a dedicated padded laptop compartment.",
+            "Image_URL__c": null,
+            "Inventory_Level__c": null,
+            "External_ID__c": "11",
+            "StockKeepingUnit": "TUM-BAG-002",
+            "Id": null,
+            "Item_Short_Description__c": null,
+            "type": "Product2",
+            "Name": "Alpha Bravo Business Backpack",
+            "Warranty__c": "Not Available"
+        },
+        "ProductId": "01tHo000004zTtgIAE",
+        "Id": "0ZRHo000000hwiaOAA",
+        "type": "ProductCategoryProduct",
+        "Name": "00001650"
+    },
+    {
+        "ProductCategory": {
+            "Id": "0ZGHo000000hpPTOAY",
+            "type": "ProductCategory",
+            "Catalog": {
+                "Id": "0ZSHo000000ddOcOAI",
+                "type": "ProductCatalog",
+                "Name": "Tumi"
+            },
+            "Name": "Backpacks"
+        },
+        "IsPrimaryCategory": "false",
+        "Product": {
+            "Description": "Lightweight everyday backpack with modern design",
+            "Image_URL__c": null,
+            "Inventory_Level__c": null,
+            "External_ID__c": "12",
+            "StockKeepingUnit": "TUM-BAG-003",
+            "Id": null,
+            "Item_Short_Description__c": null,
+            "type": "Product2",
+            "Name": "Voyageur Celina Backpack",
+            "Warranty__c": "Not Available"
+        },
+        "ProductId": "01tHo000004zTtvIAE",
+        "Id": "0ZRHo000000hwikOAA",
+        "type": "ProductCategoryProduct",
+        "Name": "00001653"
+    },
+    {
+        "ProductCategory": {
+            "Id": "0ZGHo000000hpPdOAI",
+            "type": "ProductCategory",
+            "Catalog": {
+                "Id": "0ZSHo000000ddOcOAI",
+                "type": "ProductCatalog",
+                "Name": "Tumi"
+            },
+            "Name": "Carry-on"
+        },
+        "IsPrimaryCategory": "false",
+        "Product": {
+            "Description": "Versatile and compact, this case makes taking your business on the road a breeze. With the option of being carried or wheeled, it gives you flexibility wherever you need to travel.",
+            "Image_URL__c": null,
+            "Inventory_Level__c": null,
+            "External_ID__c": "14",
+            "StockKeepingUnit": "TUM-LUG-003",
+            "Id": null,
+            "Item_Short_Description__c": null,
+            "type": "Product2",
+            "Name": "Alpha Continental Carry-On",
+            "Warranty__c": "Not Available"
+        },
+        "ProductId": "01tHo000004zTtWIAU",
+        "Id": "0ZRHo000000hwiVOAQ",
+        "type": "ProductCategoryProduct",
+        "Name": "00001649"
+    },
+    {
+        "ProductCategory": {
+            "Id": "0ZGHo000000hpPdOAI",
+            "type": "ProductCategory",
+            "Catalog": {
+                "Id": "0ZSHo000000ddOcOAI",
+                "type": "ProductCatalog",
+                "Name": "Tumi"
+            },
+            "Name": "Carry-on"
+        },
+        "IsPrimaryCategory": "false",
+        "Product": {
+            "Description": null,
+            "Image_URL__c": null,
+            "Inventory_Level__c": null,
+            "External_ID__c": "13",
+            "StockKeepingUnit": "TUM-CASE-01",
+            "Id": null,
+            "Item_Short_Description__c": null,
+            "type": "Product2",
+            "Name": "19 Degree Extended Trip Case",
+            "Warranty__c": "Not Available"
+        },
+        "ProductId": "01tHo000004zTtlIAE",
+        "Id": "0ZRHo000000hwifOAA",
+        "type": "ProductCategoryProduct",
+        "Name": "00001651"
+    }
+]

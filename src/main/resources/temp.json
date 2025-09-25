@@ -1,0 +1,286 @@
+[
+    {
+        "product_name": "Harrison Nylon Portfolio",
+        "sku": "TUM-ACC-001",
+        "brand": "Tumi",
+        "collection": "Portfolios",
+        "description": "Carry what you need in style for daily commutes or as a personal item when you fly. This elevated messenger includes thoughtfully placed pockets to carry and organize your laptop, work documents, and more",
+        "pricing": {
+            "everyday_price": "",
+            "member_price": "",
+            "suggested_monthly_payment": "",
+            "financing_terms": ""
+        },
+        "dimensions": {
+            "dimensions": "",
+            "details": {
+                "height": "",
+                "width": "",
+                "depth": "",
+                "seat_height": "",
+                "seat_depth": "",
+                "arm_height": "",
+                "weight": ""
+            }
+        },
+        "features": [],
+        "materials": [],
+        "finish": [
+            [
+                "finish_color",
+                ""
+            ]
+        ],
+        "style": "",
+        "availability": "In Stock",
+        "images": {
+            "main_image_url": "",
+            "additional_images": []
+        },
+        "delivery_options": [],
+        "warranty": "Not Available",
+        "special_features": [],
+        "care_instructions": {
+            "warranty_note": ""
+        },
+        "retailer": {
+            "name": "Tumi",
+            "location": "",
+            "url": ""
+        },
+        "sf_id": "01tHo000004zTtqIAE"
+    },
+    {
+        "product_name": "Alpha Bravo Business Backpack",
+        "sku": "TUM-BAG-002",
+        "brand": "Tumi",
+        "collection": "Backpacks",
+        "description": "This compact backpack with a streamlined silhouette has smart organization for commuting and travel gear, as well as a dedicated padded laptop compartment.",
+        "pricing": {
+            "everyday_price": "",
+            "member_price": "",
+            "suggested_monthly_payment": "",
+            "financing_terms": ""
+        },
+        "dimensions": {
+            "dimensions": "",
+            "details": {
+                "height": "",
+                "width": "",
+                "depth": "",
+                "seat_height": "",
+                "seat_depth": "",
+                "arm_height": "",
+                "weight": ""
+            }
+        },
+        "features": [],
+        "materials": [],
+        "finish": [
+            [
+                "finish_color",
+                ""
+            ]
+        ],
+        "style": "",
+        "availability": "In Stock",
+        "images": {
+            "main_image_url": "",
+            "additional_images": []
+        },
+        "delivery_options": [],
+        "warranty": "Not Available",
+        "special_features": [],
+        "care_instructions": {
+            "warranty_note": ""
+        },
+        "retailer": {
+            "name": "Tumi",
+            "location": "",
+            "url": ""
+        },
+        "sf_id": "01tHo000004zTtgIAE"
+    },
+    {
+        "product_name": "Voyageur Celina Backpack",
+        "sku": "TUM-BAG-003",
+        "brand": "Tumi",
+        "collection": "Backpacks",
+        "description": "Lightweight everyday backpack with modern design",
+        "pricing": {
+            "everyday_price": "",
+            "member_price": "",
+            "suggested_monthly_payment": "",
+            "financing_terms": ""
+        },
+        "dimensions": {
+            "dimensions": "",
+            "details": {
+                "height": "",
+                "width": "",
+                "depth": "",
+                "seat_height": "",
+                "seat_depth": "",
+                "arm_height": "",
+                "weight": ""
+            }
+        },
+        "features": [],
+        "materials": [],
+        "finish": [
+            [
+                "finish_color",
+                ""
+            ]
+        ],
+        "style": "",
+        "availability": "In Stock",
+        "images": {
+            "main_image_url": "",
+            "additional_images": []
+        },
+        "delivery_options": [],
+        "warranty": "Not Available",
+        "special_features": [],
+        "care_instructions": {
+            "warranty_note": ""
+        },
+        "retailer": {
+            "name": "Tumi",
+            "location": "",
+            "url": ""
+        },
+        "sf_id": "01tHo000004zTtvIAE"
+    },
+    {
+        "product_name": "Alpha Continental Carry-On",
+        "sku": "TUM-LUG-003",
+        "brand": "Tumi",
+        "collection": "Carry-on",
+        "description": "Versatile and compact, this case makes taking your business on the road a breeze. With the option of being carried or wheeled, it gives you flexibility wherever you need to travel.",
+        "pricing": {
+            "everyday_price": "",
+            "member_price": "",
+            "suggested_monthly_payment": "",
+            "financing_terms": ""
+        },
+        "dimensions": {
+            "dimensions": "",
+            "details": {
+                "height": "",
+                "width": "",
+                "depth": "",
+                "seat_height": "",
+                "seat_depth": "",
+                "arm_height": "",
+                "weight": ""
+            }
+        },
+        "features": [],
+        "materials": [],
+        "finish": [
+            [
+                "finish_color",
+                ""
+            ]
+        ],
+        "style": "",
+        "availability": "In Stock",
+        "images": {
+            "main_image_url": "",
+            "additional_images": []
+        },
+        "delivery_options": [],
+        "warranty": "Not Available",
+        "special_features": [],
+        "care_instructions": {
+            "warranty_note": ""
+        },
+        "retailer": {
+            "name": "Tumi",
+            "location": "",
+            "url": ""
+        },
+        "sf_id": "01tHo000004zTtWIAU"
+    },
+    {
+        "product_name": "19 Degree Extended Trip Case",
+        "sku": "TUM-CASE-01",
+        "brand": "Tumi",
+        "collection": "Carry-on",
+        "description": "",
+        "pricing": {
+            "everyday_price": "",
+            "member_price": "",
+            "suggested_monthly_payment": "",
+            "financing_terms": ""
+        },
+        "dimensions": {
+            "dimensions": "",
+            "details": {
+                "height": "",
+                "width": "",
+                "depth": "",
+                "seat_height": "",
+                "seat_depth": "",
+                "arm_height": "",
+                "weight": ""
+            }
+        },
+        "features": [],
+        "materials": [],
+        "finish": [
+            [
+                "finish_color",
+                ""
+            ]
+        ],
+        "style": "",
+        "availability": "In Stock",
+        "images": {
+            "main_image_url": "",
+            "additional_images": []
+        },
+        "delivery_options": [],
+        "warranty": "Not Available",
+        "special_features": [],
+        "care_instructions": {
+            "warranty_note": ""
+        },
+        "retailer": {
+            "name": "Tumi",
+            "location": "",
+            "url": ""
+        },
+        "sf_id": "01tHo000004zTtlIAE"
+    }
+]
+
+[
+    {
+        "UseStandardPrice": "false",
+        "UnitPrice": "249.0",
+        "Product2Id": "01tHo000004zTtWIAU",
+        "Pricebook2": {
+            "IsStandard": "true",
+            "Description": null,
+            "IsActive": "true",
+            "Id": null,
+            "type": "Pricebook2",
+            "Name": "Standard Price Book"
+        },
+        "Product2": {
+            "Description": "Versatile and compact, this case makes taking your business on the road a breeze. With the option of being carried or wheeled, it gives you flexibility wherever you need to travel.",
+            "ProductCode": "TUM-LUG-003",
+            "IsActive": "true",
+            "Family": "Product",
+            "Id": null,
+            "type": "Product2",
+            "Name": "Alpha Continental Carry-On"
+        },
+        "IsActive": "true",
+        "Pricebook2Id": "01sHo000003iWE6IAM",
+        "Id": null,
+        "type": "PricebookEntry"
+    }
+]

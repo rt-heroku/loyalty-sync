@@ -1,0 +1,15 @@
+For the product with the details defined in the product definiton at the bottom:
+
+Please find 5 high-quality real photographs that either match this product closely or evoke it strongly (style/toppings/layout/branding).
+Return them in JSON format, with each having:
+
+
+  {
+   “image_url”: URL of image,
+   “alt_text”: Short description: what’s in the image, how close it is to product
+  }
+
+Prefer official images (from brand or retailer) when possible. If not, use similar styled images (real burgers, with bun, patty, lettuce/tomato/sauce etc.)
+
+The product is:
+<product>

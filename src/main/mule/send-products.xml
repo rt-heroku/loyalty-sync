@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" 
+      xmlns:db="http://www.mulesoft.org/schema/mule/db" 
+      xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+      xmlns:flow-ref="http://www.mulesoft.org/schema/mule/core"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+                         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+                         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+                         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+                         http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+                         http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+
+    <!-- Main Flow: loyalty-products-send -->
+    <flow name="loyalty-products-send" doc:id="aab77124-619b-4f4a-9682-5b7da4db23d5">
+        
+        <!-- HTTP Listener -->
+        <http:listener doc:name="POST /loyalty/products/send" 
+                      doc:id="9d3ad4d2-8f94-4e74-a91b-c744013dc2d6" 
+                      config-ref="HTTP_Listener_config" 
+                      path="/loyalty/products/send" 
+                      allowedMethods="POST"/>
+        
+        <!-- Initialize Variables -->
+        <set-variable value="#[attributes.queryParams.product]" variableName="productId" doc:name="Set Product ID"/>
+        <set-variable value="#[{}]" variableName="processingSummary" doc:name="Initialize Summary"/>
+        <set-variable value="#[0]" variableName="successCount" doc:name="Initialize Success Count"/>
+        <set-variable value="#[0]" variableName="updateCount" doc:name="Initialize Update Count"/>
+        <set-variable value="#[0]" variableName="failureCount" doc:name="Initialize Failure Count"/>
+        <set-variable value="#[[]]" variableName="failures" doc:name="Initialize Failures List"/>
+        
+        <!-- Get Existing Catalogs -->
+        <flow-ref doc:name="Get Catalogs" doc:id="a74265ba-5de9-430e-a15c-63c71519eab6" name="products-get-catalog"/>
+        <set-variable value="#[payload]" variableName="existingCatalogs" doc:name="Store Catalogs"/>
+        
+        <!-- Determine Processing Mode -->
+        <choice doc:name="Single Product or Batch?">
+            <!-- Single Product Processing -->
+            <when expression="#[vars.productId != null and vars.productId != '' and vars.productId != 'null']">
+                <logger level="INFO" doc:name="Log Single Product" message="Processing single product ID: #[vars.productId]"/>
+                
+                <!-- Get Single Product from Database -->
+                <db:select doc:name="Get Single Product" doc:id="64cbe8a3-5da4-4293-8517-698117a43e38" config-ref="Database_Config">
+                    <db:sql><![CDATA[SELECT * FROM products 
+WHERE id = :productId AND is_active = true
+                    ]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	productId: vars.productId
+}]]]></db:input-parameters>
+                </db:select>
+                
+                <!-- Process Single Product -->
+                <choice doc:name="Product Found?">
+                    <when expression="#[sizeOf(payload) > 0]">
+                        <flow-ref doc:name="Process Product" doc:id="089af012-90e7-47b1-91cc-cb70f47422e6" name="process-product-subflow"/>
+                    </when>
+                    <otherwise>
+                        <logger level="WARN" doc:name="Product Not Found" message="Product with ID #[vars.productId] not found or inactive"/>
+                        <set-variable value="#[vars.failures ++ [{productId: vars.productId, error: 'Product not found or inactive'}]]" variableName="failures"/>
+                        <set-variable value="#[vars.failureCount + 1]" variableName="failureCount"/>
+                    </otherwise>
+                </choice>
+            </when>
+            
+            <!-- Batch Processing -->
+            <otherwise>
+                <logger level="INFO" doc:name="Log Batch Processing" message="Processing all active products in batches"/>
+                
+                <!-- Get All Active Products -->
+                <db:select doc:name="Get All Active Products" doc:id="94a13c0c-0b38-4d61-b41e-a73db6d1c658" config-ref="Database_Config">
+                    <db:sql><![CDATA[SELECT *
+FROM products 
+WHERE is_active = true 
+ORDER BY id
+]]></db:sql>
+                </db:select>
+                
+                <!-- Process Each Product -->
+                <foreach doc:name="For Each Product" doc:id="27c9162a-b1eb-4fd8-aa8a-a31fd4aa5d0b" collection="#[payload]">
+                    <flow-ref doc:name="Process Product" doc:id="d82f0f68-5541-4458-beee-dccb3a152229" name="process-product-subflow"/>
+                </foreach>
+            </otherwise>
+        </choice>
+        
+        <!-- Generate Summary Response -->
+        <logger level="INFO" doc:name="Logger" doc:id="e4d557f7-a679-42a4-b37b-7b938242a222" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.failures]"/>
+		<ee:transform doc:name="Generate Summary" doc:id="eabab5aa-6402-4a72-9e83-384b6d5ccbff">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    summary: "Product synchronization completed successfully.\n" ++
+             "Total Processed: " ++ (vars.successCount as Number default 0 + vars.updateCount as Number default 0 + vars.failureCount as Number default 0 ) as String default "" ++ "\n" ++
+             "Successfully Created: " ++ vars.successCount as String default ""  ++ "\n" ++
+             "Successfully Updated: " ++ vars.updateCount as String default ""  ++ "\n" ++
+             "Failures: " ++ vars.failureCount as String default ""  ++ 
+             (if (vars.failureCount > 0) 
+                "\n\nFailure Details:\n" ++ ((vars.failures map ( "- Product ID " ++ ($.productId[0] as String default "") ++ ": " ++ $.error)) joinBy "\n") as String default ""
+              else ""),
+    statistics: {
+        totalProcessed: vars.successCount as Number default 0  + vars.updateCount as Number default 0  + vars.failureCount as Number default 0 ,
+        created: vars.successCount,
+        updated: vars.updateCount,
+        failed: vars.failureCount
+    },
+    failures: if (vars.failureCount > 0) vars.failures else null
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        
+        <!-- Error Handling -->
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate">
+                <logger level="ERROR" doc:name="Log Error" message="Flow error: #[error.description]"/>
+                <ee:transform doc:name="Error Response">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    error: "An unexpected error occurred during product synchronization",
+    message: error.description,
+    summary: "Process failed with error: " ++ error.description as String default ""
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+
+    <!-- Sub-flow: Process Individual Product -->
+    <sub-flow name="process-product-subflow" doc:id="b1b7d18e-aee2-49d1-9531-203c1a8bcb1b">
+		<try doc:name="Try Process Product">
+            
+            <!-- Extract Product Data -->
+            <logger level="INFO" doc:name="Logger" doc:id="67fff8f9-8d78-4834-8069-647eb42d703c" message="Payload #[payload]"/>
+			<set-payload value="#[if (payload is Array)&#10;payload[0]&#10;else payload]" doc:name="Set Payload" doc:id="5b4d4239-7b53-4429-b54f-ee156a3eaa62" />
+			<set-variable value="#[payload]" doc:name="Set Product" doc:id="f3f74af9-3b16-46b1-b3f6-ce6c6db84634" variableName="product"/>
+			<set-variable value="#[payload.id]" variableName="currentProductId" doc:name="Set Current Product ID"/>
+            <set-variable value="#[payload.brand]" variableName="brandName" doc:name="Set Brand Name"/>
+            <set-variable value="#[payload.collection]" variableName="collectionName" doc:name="Set Collection Name"/>
+            
+            <logger level="INFO" doc:name="Log Processing" message="Processing product: #[payload.name] (ID: #[payload.id])"/>
+            
+            <!-- Step 1: Handle Catalog (Brand) -->
+			<choice doc:name="Catalog Exists?">
+                <when expression="#[(!isEmpty(vars.existingCatalogs filter ($.Name == vars.brandName) ))]">
+                    <set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;(vars.existingCatalogs filter ($.Name == vars.brandName))[0].Id]" variableName="catalogId" doc:name="Set Existing Catalog ID"/>
+                    <logger level="INFO" doc:name="Log Existing Catalog" message="Using existing catalog: #[vars.brandName] (ID: #[vars.catalogId])"/>
+                </when>
+                <otherwise>
+                    <logger level="INFO" doc:name="Log Create Catalog" message="Creating new catalog: #[vars.brandName]"/>
+                    
+                    <!-- Create New Catalog -->
+                    <salesforce:create doc:name="Create Catalog" doc:id="ec8e477f-6a4b-4d8b-a36b-094d0e01013a" config-ref="Salesforce_Config" type="ProductCatalog">
+                        <salesforce:records><![CDATA[#[[{
+Name: vars.brandName,
+ Description: "Auto-created catalog for brand: " ++ vars.brandName[0] as String default ""
+}]]]]></salesforce:records>
+                    </salesforce:create>
+                    
+                    <set-variable value="#[payload.items[0].payload.id]" variableName="catalogId" doc:name="Set New Catalog ID"/>
+                    
+                    <!-- Add to existing catalogs for future reference -->
+                    <set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;vars.existingCatalogs as Array default [] ++ [{Id: vars.catalogId, Name: vars.brandName}]]" variableName="existingCatalogs" doc:name="Set existingCatalogs"/>
+                </otherwise>
+            </choice>
+            
+            <!-- Step 2: Handle Category (Collection) -->
+            <logger level="INFO" doc:name="Logger" doc:id="2b21b345-0dcc-42f5-bd82-ec86840f4361" message="collectionName:#[ vars.collectionName] , catalogId:#[ vars.catalogId]"/>
+			<salesforce:query doc:name="Query Existing Category" doc:id="8b962208-a78a-40ce-9470-9a0029e1cd9c" config-ref="Salesforce_Config">
+                <salesforce:salesforce-query><![CDATA[SELECT Id FROM ProductCategory 
+WHERE Name = ':collectionName' AND CatalogId = ':catalogId'
+                ]]></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{
+                    collectionName: vars.collectionName,
+                    catalogId: vars.catalogId
+                }]]]></salesforce:parameters>
+            </salesforce:query>
+            
+            <choice doc:name="Category Exists?">
+                <when expression="#[sizeOf(payload) > 0]">
+                    <set-variable value="#[payload[0].Id]" variableName="categoryId" doc:name="Set Existing Category ID"/>
+                    <logger level="INFO" doc:name="Log Existing Category" message="Using existing category: #[vars.collectionName] (ID: #[vars.categoryId])"/>
+                </when>
+                <otherwise>
+                    <logger level="INFO" doc:name="Log Create Category" message="Creating new category: #[vars.collectionName]"/>
+                    
+                    <!-- Create New Category -->
+                    <salesforce:create doc:name="Create Category" doc:id="b67e90bf-cf2e-4b8f-86a7-ed7247970875" config-ref="Salesforce_Config" type="ProductCategory">
+                        <salesforce:records><![CDATA[#[[{
+                            Name: vars.collectionName,
+                            CatalogId: vars.catalogId,
+                            Description: "Auto-created category for collection: " ++ vars.collectionName[0] as String default ""
+                        }]]]]></salesforce:records>
+                    </salesforce:create>
+                    
+                    <set-variable value="#[payload.items[0].payload.id]" variableName="categoryId" doc:name="Set New Category ID"/>
+                </otherwise>
+            </choice>
+            
+            <!-- Step 3: Upsert Product -->
+            <ee:transform doc:name="Transform Product Data" doc:id="be288e2b-cdd3-4696-9199-9362330dd5d1">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+    External_Id__c: vars.product.id as String,
+    Name: vars.product.name ,
+    ProductCode: vars.product.sku ,
+    Description: vars.product.description,
+    IsActive: vars.product.is_active as Boolean default true,
+    Family: vars.product.category,
+    StockKeepingUnit: vars.product.sku 
+}]]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            
+            <!-- Upsert Product -->
+            <salesforce:upsert doc:name="Upsert Product" doc:id="74aacffa-1498-4119-8c5c-6ed9d9c4381e" 
+                              config-ref="Salesforce_Config" 
+                              externalIdFieldName="External_Id__c" 
+                              objectType="Product2">
+            </salesforce:upsert>
+            
+            <set-variable value="#[payload.items[0].payload.id]" variableName="productSfId" doc:name="Set Product SF ID"/>
+            <set-variable value="#[payload[0].created]" variableName="wasCreated" doc:name="Set Created Flag"/>
+            
+            <!-- Update local database with Salesforce ID if created -->
+            
+            <!-- Step 4: Create ProductCategoryProduct Link -->
+            <db:update doc:name="Update SF ID in DB" doc:id="d7f7069b-d284-4ca1-be54-39c16f7e89c6" config-ref="Database_Config">
+                        <db:sql><![CDATA[UPDATE products SET sf_id = :sfId WHERE id = :productId]]></db:sql>
+                        <db:input-parameters><![CDATA[#[{
+	sfId: vars.productSfId,
+	productId: vars.productId
+}]]]>
+                        </db:input-parameters>
+                    </db:update>
+			<salesforce:query doc:name="Check Existing Link" doc:id="2522483f-2b39-4f30-bb1d-6821b59cb7c1" config-ref="Salesforce_Config">
+                <salesforce:salesforce-query><![CDATA[
+                    SELECT Id FROM ProductCategoryProduct 
+                    WHERE ProductId = ':productId' AND ProductCategoryId = ':categoryId'
+                ]]></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{
+                    productId: vars.productSfId,
+                    categoryId: vars.categoryId
+                }]]]></salesforce:parameters>
+            </salesforce:query>
+            
+            <choice doc:name="Link Exists?">
+                <when expression="#[sizeOf(payload) == 0]">
+                    <logger level="INFO" doc:name="Log Create Link" message="Creating ProductCategoryProduct link"/>
+                    
+                    <salesforce:create doc:name="Create Product Category Link" doc:id="8962257d-7939-49eb-92f7-e8fc39ec01d1" config-ref="Salesforce_Config" type="ProductCategoryProduct">
+                        <salesforce:records><![CDATA[#[[{
+                            ProductId: vars.productSfId,
+                            ProductCategoryId: vars.categoryId
+                        }]]]]></salesforce:records>
+                    </salesforce:create>
+                </when>
+                <otherwise>
+                    <logger level="INFO" doc:name="Log Existing Link" message="ProductCategoryProduct link already exists"/>
+                </otherwise>
+            </choice>
+            
+            <!-- Update Success Counters -->
+            <choice doc:name="Created or Updated?">
+                <when expression="#[vars.wasCreated == true]">
+                    <set-variable value="#[(vars.successCount as Number default 0) + 1]" variableName="successCount" doc:name="Increment Success Count"/>
+                    <logger level="INFO" doc:name="Log Success" message="Successfully created product: #[payload.name]"/>
+                </when>
+                <otherwise>
+                    <set-variable value="#[(vars.updateCount as Number default 0) + 1]" variableName="updateCount" doc:name="Increment Update Count"/>
+                    <logger level="INFO" doc:name="Log Update" message="Successfully updated product: #[payload.name]"/>
+                </otherwise>
+            </choice>
+            
+            <!-- Error Handling for Individual Product -->
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue">
+                    <logger level="ERROR" doc:name="Log Product Error" message="Error processing product ID #[vars.currentProductId]: #[error.description]"/>
+                    
+                    <set-variable value="#[vars.failures ++ [{
+                        productId: vars.currentProductId, 
+                        productName: payload.name default 'Unknown',
+                        error: error.description
+                    }]]" variableName="failures" doc:name="Add to Failures"/>
+                    
+                    <set-variable value="#[vars.failureCount + 1]" variableName="failureCount" doc:name="Increment Failure Count"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </sub-flow>
+
+</mule>

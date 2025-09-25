@@ -1,0 +1,90 @@
+You are a product manager, designer and brand strategist.  
+I want you to generate or mock a brand <brand> in the segment <segment>, or expand on the existing brand I provide.  
+<url>
+
+Please create ** <numOfProds> products** that belong to this brand.  
+For each product, always include the following fields:
+
+- Product Name  
+- Product Type (e.g., jacket, sofa, carry-on, etc.)  
+- sku
+- Pricing.price
+- Brand
+- Collection (group if relevant, like “Fall Essentials” or 'Voyageur Travel')  
+- Short Description (summary of description under 255 chars)
+- Description  
+- Key Features (bullet list)  
+- Materials  
+- Colors (hex codes or names)  
+- Dimensions (inches or cm, as appropriate)  
+- Weight  
+- Warranty Information  
+- Care Instructions  
+- Images (provide at least 1 mock image URL or suggestion, e.g., Unsplash/Pexels keyword)  
+
+Format the output as a JSON array with <numOfProds> objects, one per product.  
+
+Important:  
+- Ensure products feel cohesive as part of the same brand.  
+- Mix product types where relevant (don’t make all  <numOfProds> the same thing).  
+- Keep descriptions realistic, not overly exaggerated.  
+- Make sure the following fields are always included:
+	 Pricing.price, SKU, brand, category, product_name, 
+	 product_type, collection, description, short_description.
+- Do not skip any fields on the example bellow
+
+Return it in the format of the following example:
+
+{
+	"product_name": "Short Trip Expandable 4 Wheeled Packing Case",
+	"sku": "01171652693",
+	"brand": "Tumi",
+	"collection": "TUMI ALPHA",
+	"description": "Experience the luxury of flexible packing with this versatile suitcase equipped with an expandable main compartment. It brings together innovation, superior performance, and best-in-class functionality.",
+	"short_description": "",
+	"pricing": {
+		"price": "$1,035",
+		"member_price": "",
+		"suggested_monthly_payment": "",
+		"financing_terms": ""
+	},
+    "product_type": "Business Backpack",
+	"color": "black",
+	"category": "Backpack",
+	"stock": 25,
+	"dimensions": {
+		"dimensions": "26.0 x 19.0 x 13.0\" (15.0\" Expanded Depth)",
+		"details": [
+			["height","26.0 inches"],
+			["width","19.0 inches"],
+			["depth","13.0 inches"]
+		]
+	},
+	"features": [["Expansion","15.0\" Expanded Depth"]],
+	"materials": [
+		["Primary Material","Ballistic Nylon"]
+	],
+	"finish": [
+		["finish_color","Black"]
+	],
+	"style": "",
+	"availability": "In Stock",
+	"images": {
+		"main_image_url": "https://tumi.scene7.com/is/image/Tumi/1171652693_main?wid=1020&hei=1238",
+		"alt_text": "Short Trip Expandable 4 Wheeled Packing Case product image two ",
+		"additional_images": [
+				{
+				"url": "https://tumi.scene7.com/is/image/Tumi/1171652693_alt7?wid=1020&hei=1238",
+				"alt_text": "Short Trip Expandable 4 Wheeled Packing Case product image two "
+			}
+		]
+	},
+	"delivery_options": [],
+	"special_features": [],
+	"care_instructions": "",
+	"warranty": "",
+	"retailer": {
+		"name": "Tumi",
+		"url": "https://www.tumi.com/p/short-trip-expandable-4-wheeled-packing-case-01171652693.html"
+	}
+}

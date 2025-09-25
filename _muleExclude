@@ -1,0 +1,6 @@
+config-local.yaml
+**/config-local.yaml
+**/src/main/resources/config/config-local.yaml
+**/src/main/resources/redsandia.json
+**/src/main/resources/tumi_example.json
+**/src/main/resources/mathis_sitemap.xml

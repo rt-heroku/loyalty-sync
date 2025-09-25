@@ -1,0 +1,293 @@
+[
+
+	{
+		"product_name": "Classic Root Beer Burger",
+		"sku": "AW1001",
+		"brand": "A&W",
+		"collection": "Signature Burgers",
+		"description": "A&W's signature burger infused with root beer marinated beef patty, topped with crisp lettuce, tomato, and special sauce, all served on a toasted bun.",
+		"short_description": "A classic A&W burger with a root beer twist.",
+		"pricing": {
+			"price": "$7.99",
+			"member_price": "",
+			"suggested_monthly_payment": "",
+			"financing_terms": ""
+		},
+		"product_type": "Burger",
+		"color": "",
+		"category": "Food",
+		"stock": 100,
+		"dimensions": {
+			"dimensions": "",
+			"details": []
+		},
+		"features": [],
+		"materials": [
+
+			[
+				"Patty",
+				"Beef"
+			],
+
+			[
+				"Bun",
+				"Wheat"
+			],
+
+			[
+				"Lettuce",
+				"Iceberg"
+			],
+
+			[
+				"Sauce",
+				"Special A&W Sauce"
+			]
+		],
+		"finish": [],
+		"style": "",
+		"availability": "In Stock",
+		"images": {
+			"main_image_url": "https://example.com/images/classic_root_beer_burger.jpg",
+			"alt_text": "Classic Root Beer Burger",
+			"additional_images": []
+		},
+		"delivery_options": [],
+		"special_features": [],
+		"care_instructions": "Consume immediately for best flavor.",
+		"warranty": "Not applicable",
+		"retailer": {
+			"name": "A&W",
+			"url": "https://www.aw.com/menu/classic-root-beer-burger"
+		}
+
+	},
+
+	{
+		"product_name": "Cheese Curds Bites",
+		"sku": "AW1003",
+		"brand": "A&W",
+		"collection": "Side Delights",
+		"description": "Crispy and golden-fried cheese curds, a perfect side or snack to accompany any meal.",
+		"short_description": "Enjoy crispy cheese curds, a perfect side or snack.",
+		"pricing": {
+			"price": "$4.99",
+			"member_price": "",
+			"suggested_monthly_payment": "",
+			"financing_terms": ""
+		},
+		"product_type": "Side",
+		"color": "",
+		"category": "Food",
+		"stock": 200,
+		"dimensions": {
+			"dimensions": "",
+			"details": [],
+			"features": [],
+			"materials": [
+
+				[
+					"Main",
+					"Cheese"
+				],
+
+				[
+					"Coating",
+					"Batter"
+				]
+			],
+			"finish": [],
+			"style": "",
+			"availability": "In Stock",
+			"images": {
+				"main_image_url": "https://example.com/images/cheese_curds_bites.jpg",
+				"alt_text": "Cheese Curds Bites",
+				"additional_images": []
+			},
+			"delivery_options": [],
+			"special_features": [],
+			"care_instructions": "Consume immediately for best flavor.",
+			"warranty": "Not applicable",
+			"retailer": {
+				"name": "A&W",
+				"url": "https://www.aw.com/menu/cheese-curds-bites"
+			}
+		}
+	},
+
+	{
+		"product_name": "Spicy Chicken Sandwich",
+		"sku": "AW1004",
+		"brand": "A&W",
+		"collection": "Spicy Specials",
+		"description": "Crispy fried chicken breast tossed in spicy seasoning, topped with lettuce and mayo, served on a freshly toasted bun.",
+		"short_description": "A spicy twist on the classic chicken sandwich.",
+		"pricing": {
+			"price": "$6.99",
+			"member_price": "",
+			"suggested_monthly_payment": "",
+			"financing_terms": ""
+		},
+		"product_type": "Sandwich",
+		"color": "",
+		"category": "Food",
+		"stock": 120,
+		"dimensions": {
+			"dimensions": "",
+			"details": [],
+			"features": [],
+			"materials": [
+
+				[
+					"Main",
+					"Chicken Breast"
+				],
+
+				[
+					"Bun",
+					"White"
+				],
+
+				[
+					"Seasoning",
+					"Spicy Mix"
+				],
+
+				[
+					"Sauce",
+					"Mayo"
+				]
+			],
+			"finish": [],
+			"style": "",
+			"availability": "In Stock",
+			"images": {
+				"main_image_url": "https://example.com/images/spicy_chicken_sandwich.jpg",
+				"alt_text": "Spicy Chicken Sandwich",
+				"additional_images": []
+			},
+			"delivery_options": [],
+			"special_features": [],
+			"care_instructions": "Consume immediately for best flavor.",
+			"warranty": "Not applicable",
+			"retailer": {
+				"name": "A&W",
+				"url": "https://www.aw.com/menu/spicy-chicken-sandwich"
+			}
+		}
+	},
+
+	{
+		"product_name": "Sweet Potato Fries",
+		"sku": "AW1005",
+		"brand": "A&W",
+		"collection": "Side Delights",
+		"description": "Deliciously crispy sweet potato fries, a perfect balance of sweet and savory, ideal as a side dish or snack.",
+		"short_description": "Crispy sweet potato fries with a perfect sweet-savory balance.",
+		"pricing": {
+			"price": "$3.99",
+			"member_price": "",
+			"suggested_monthly_payment": "",
+			"financing_terms": ""
+		},
+		"product_type": "Side",
+		"color": "",
+		"category": "Food",
+		"stock": 150,
+		"dimensions": {
+			"dimensions": "",
+			"details": [],
+			"features": [],
+			"materials": [
+
+				[
+					"Main",
+					"Sweet Potato"
+				],
+
+				[
+					"Coating",
+					"Seasoned"
+				]
+			],
+			"finish": [],
+			"style": "",
+			"availability": "In Stock",
+			"images": {
+				"main_image_url": "https://example.com/images/sweet_potato_fries.jpg",
+				"alt_text": "Sweet Potato Fries",
+				"additional_images": []
+			},
+			"delivery_options": [],
+			"special_features": [],
+			"care_instructions": "Consume immediately for best flavor.",
+			"warranty": "Not applicable",
+			"retailer": {
+				"name": "A&W",
+				"url": "https://www.aw.com/menu/sweet-potato-fries"
+			}
+		}
+	},
+
+	{
+		"product_name": "Beyond Meat Vegan Burger",
+		"sku": "AW1002",
+		"brand": "A&W",
+		"collection": "Plant-Based Delights",
+		"description": "A delicious plant-based burger with a juicy Beyond Meat patty, fresh lettuce, tomato, and vegan mayo, served on a whole wheat bun.",
+		"short_description": "Savor a meat-free, plant-based burger experience.",
+		"pricing": {
+			"price": "$8.99",
+			"member_price": "",
+			"suggested_monthly_payment": "",
+			"financing_terms": ""
+		},
+		"product_type": "Burger",
+		"color": "",
+		"category": "Food",
+		"stock": 80,
+		"dimensions": {
+			"dimensions": "",
+			"details": [],
+			"features": [],
+			"materials": [
+
+				[
+					"Patty",
+					"Beyond Meat"
+				],
+
+				[
+					"Bun",
+					"Whole Wheat"
+				],
+
+				[
+					"Lettuce",
+					"Iceberg"
+				],
+
+				[
+					"Sauce",
+					"Vegan Mayo"
+				]
+			],
+			"finish": [],
+			"style": "",
+			"availability": "In Stock",
+			"images": {
+				"main_image_url": "https://example.com/images/beyond_meat_vegan_burger.jpg",
+				"alt_text": "Beyond Meat Vegan Burger",
+				"additional_images": []
+			},
+			"delivery_options": [],
+			"special_features": [],
+			"care_instructions": "Consume immediately for best flavor.",
+			"warranty": "Not applicable",
+			"retailer": {
+				"name": "A&W",
+				"url": "https://www.aw.com/menu/beyond-meat-vegan-burger"
+			}
+		}
+	}
+]

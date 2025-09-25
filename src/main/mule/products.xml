@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ms-inference="http://www.mulesoft.org/schema/mule/ms-inference"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/mule/ms-inference/current/mule-ms-inference.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:request-config name="HTTP_Heroku_Inference" doc:name="HTTP Request configuration" doc:id="cf959946-97b8-43ae-a940-4662bb067a11">
+		<http:request-connection protocol="HTTPS" host="us.inference.heroku.com" />
+	</http:request-config>
+	<file:config name="File_Config1" doc:name="File Config" doc:id="2415aa1f-bb90-4964-bd78-6a9059d0f072" />
+	<flow name="products-generate-http" doc:id="ca8b773f-10e3-4c10-aeb9-07c06db66c7e" >
+		<http:listener doc:name="Listener" doc:id="088b922b-b679-4b13-ae08-20a8fd3fec8f" path="/products/http" config-ref="HTTP_Listener_config"/>
+		<set-variable value="modern bags" doc:name="Set Variable" doc:id="94fc98c3-c29c-494c-9236-1a64c23169bd" variableName="brand" />
+		<set-variable value="luzury luggage travel" doc:name="Set Variable1" doc:id="55ab719c-f13b-439a-bf2f-4751edf78ba6" variableName="segment" />
+		<set-variable value="#[&quot;You are a product designer and brand strategist.  &#10;I want you to generate or mock a brand &quot; ++ vars.brand ++ &quot; in the &quot; ++ vars.segment  ++ &quot;, or expand on an existing brand I provided.  &#10;&#10;Please create **10 products** that belong to this brand.  &#10;For each product, include the following fields:&#10;&#10;- Product Name  &#10;- Product Type (e.g., jacket, sofa, carry-on, etc.)  &#10;- Collection (group if relevant, like 'Fall Essentials' or 'Voyageur Travel')  &#10;- Brief Description (2–3 sentences)  &#10;- Key Features (bullet list)  &#10;- Materials  &#10;- Colors (hex codes or names)  &#10;- Dimensions (inches or cm, as appropriate)  &#10;- Weight  &#10;- Warranty Information  &#10;- Care Instructions  &#10;- Images (provide at least 1 mock image URL or suggestion, e.g., Unsplash/Pexels keyword)  &#10;&#10;Format the output as a JSON array with 10 objects, one per product.  &#10;&#10;Important:  &#10;- Ensure products feel cohesive as part of the same brand.  &#10;- Mix product types where relevant (don’t make all 10 the same thing).  &#10;- Keep descriptions realistic, not overly exaggerated.  &#10;&#10;&quot; as String]" doc:name="Prompt" doc:id="ff556c26-b748-46bd-ba13-fbe78cbfea9b" variableName="prompt" />
+		<logger level="INFO" doc:name="Logger" doc:id="e886a94d-b79c-48eb-999b-a315a860bc2e" message="#[vars.prompt]" />
+		<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;    "model": "claude-4-sonnet",&#10;    "temperature": 0.7,&#10;    "top_p": 0.99,&#10;    "messages": [vars.prompt]&#10;  }]' doc:name="Set Payload" doc:id="23d08136-9f8b-4268-9613-b398c76c4f8d" />
+		<logger level="INFO" doc:name="Logger1" doc:id="bafa5ebd-1cf4-4383-b263-238e4cbe2342" message="#[payload]" />
+		<http:request method="POST" doc:name="Request" doc:id="333879d9-3ad8-45ea-8618-5be3a0e7cd3e" config-ref="HTTP_Heroku_Inference" path="/v1/agents/heroku">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer inf-8f1ac640-3573-4fcd-9d72-865c54849cf1" ,
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="ba31f4f6-79eb-48fc-8625-48b5cb617794" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	payload: payload,
+	attributes: attributes
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="products-generate" doc:id="98d6c3cf-236c-4aff-9fa8-0aceed68cd2a" >
+		<http:listener doc:name="Listener" doc:id="57b5104d-1cd8-4f6c-abd3-02766ccf7754" path="/products/generate" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select" doc:id="f6df25d4-5690-4a75-aacd-61a21333bfd5" target="batch_num" config-ref="Database_Config">
+			<db:sql ><![CDATA[select get_next_batch_number()]]></db:sql>
+		</db:select>
+		<set-variable value='#[attributes.queryParams.n as Number {format : "#" } default 1]' doc:name="Set Variable" doc:id="1eb178c0-a5c2-4724-9654-8e5bb833074f" variableName="numberOfProds"/>
+		<choice doc:name="Choice" doc:id="551a6b41-4ca4-487e-b3a1-3b21d07a33e7" >
+			<when expression="!isEmpty(p('mac.openai_key'))">
+				<set-variable value="#[[vars.numberOfProds]]" doc:name="Set Variable" doc:id="9c022834-b634-4724-ae93-c89fe15dc158" variableName="nums"/>
+				<set-variable value="#[true as Boolean]" doc:name="Set Variable" doc:id="26a6610b-3bb6-444d-bf44-d547517023f4" variableName="openai"/>
+			</when>
+			<otherwise >
+				<set-variable value="#[var x = p('mac.send_batches_size') as Number {format: &quot;#&quot;} default 2&#10;fun divideByX(n) =&#10;    if (n &lt;= 0) [] &#10;    else if (n &lt; x) [n]&#10;    else [x] ++ divideByX(n - x)&#10;&#10;---&#10;divideByX(vars.numberOfProds)]" doc:name="Set Variable" doc:id="5d367807-ec01-4c35-958a-522c7a485caa" variableName="nums" />
+				<set-variable value="#[false as Boolean]" doc:name="Set Variable" doc:id="89a07bf2-089c-4406-9b0b-5db373f4aba5" variableName="openai"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Log Model" doc:id="1c27c764-fa69-4ef4-959e-e839966a5541" message="\nUsing OpoenAI = #[vars.openai]" />
+		<set-variable value='#[attributes.queryParams.brand as String default "any brand"]' doc:name="Set Variable" doc:id="e98e71bb-8ef4-4807-a630-d34764f4c8ba" variableName="brand" />
+		<set-variable value='#[if (isEmpty(attributes.queryParams.url)) "" else&#10;"use the following URL "  ++ attributes.queryParams.url as String default "" ++  " as an example of the products and get images from it."]' doc:name="Set Variable" doc:id="a31aef9b-9a2a-4d67-b257-e112ca523b90" variableName="url"/>
+		<set-variable value='#[attributes.queryParams.segment as String default "any segment"]' doc:name="Set Variable" doc:id="dab72b95-08be-4f08-9466-f13ecf3576ad" variableName="segment" mimeType="text/plain" />
+		<logger level="INFO" doc:name="Log nums" doc:id="e0603cba-b1ef-455e-9f96-5b332d3b403f" message="\nTotal number of products to generate [ #[vars.nums] ]"/>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="005ab8d9-097a-4ac5-93cb-3e9d64db3878" collection="#[vars.nums]">
+			<logger level="INFO" doc:name="Logger" doc:id="6b9ae36a-be35-4fc5-a134-aec0d559fb63" message="\nGenerating #[payload] products!"/>
+			<set-variable value="#[payload as Number default 1]" doc:name="Set Variable" doc:id="8a150763-1a71-4101-8d28-72a16955e469" variableName="numBatch"/>
+			<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;&#10;var prompt = readUrl(&quot;classpath://prompt.txt&quot;,&quot;text/plain&quot;)&#10;&#10;output text/plain&#10;---&#10;replaceAll(&#10;	replaceAll(&#10;	    replaceAll(&#10;	        replaceAll(prompt  as String default &quot;&quot;,'&lt;brand&gt;',vars.brand as String default &quot;&quot;)&#10;	        , '&lt;segment&gt;', vars.segment as String default &quot;&quot;)&#10;	    , '&lt;numOfProds&gt;', payload  as String default &quot;1&quot;&#10;	), '&lt;url&gt;', vars.url&#10;)]" doc:name="Prompt" doc:id="2066a538-1521-466e-bf44-54a6e0822bff" variableName="prompt" />
+			<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;[{&#10;	role : "user" ,&#10;	content : vars.prompt&#10;}]]' doc:name="Set Payload" doc:id="a8a1779e-d883-4703-a752-e34728356cb1" />
+			<choice doc:name="Choice" doc:id="4939d643-45f3-4f08-98ef-834525fc50ef" >
+				<when expression="#[vars.openai]">
+					<ms-inference:chat-completions doc:name="Call OpenAI" doc:id="7ebfbc6e-4671-4d25-903e-dabe7f676c6d" config-ref="MuleSoft_Inference_Text_generation_config">
+			<repeatable-in-memory-stream />
+		</ms-inference:chat-completions>
+				</when>
+				<otherwise >
+					<ms-inference:chat-completions doc:name="Call Heroku AI" doc:id="da7b6cf2-fc1e-47a1-be77-a0a0828f12b5" config-ref="Heroku_Inference" >
+						<repeatable-in-memory-stream />
+					</ms-inference:chat-completions>
+				</otherwise>
+			</choice>
+			<logger level="DEBUG" doc:name="Logger" doc:id="af6fc657-d5f5-48da-9ce9-08af8c0f9fd9" message="#[payload]" />
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="a64471c5-d435-4dc6-aeb5-a5b18f132395" variableName="response"/>
+			<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;---&#10;if (payload.response is Object)&#10;	write(payload.response, 'text/plain')&#10;else&#10;	replaceAll(replaceAll(payload.response,'```json',''),'```','') as String default &quot;&lt;&lt;&lt;NO CONTENT&gt;&gt;&gt;&quot;]" doc:name="Parsed Response" doc:id="6bfbec9a-b47e-4762-af23-f561c315bb4d" variableName="parsed"/>
+			<db:insert doc:name="Insert Generated Product" doc:id="15a875f6-f6dd-4b64-91a3-002438433dda" target="insert" config-ref="Database_Config">
+				<db:sql><![CDATA[INSERT INTO public.generated_products (
+    batch, 
+    brand, 
+    segment, 
+    num_of_products, 
+    generated_product, 
+    prompt, 
+    raw_response
+) VALUES (
+    :batch_num,
+    :brand,
+    :segment,
+    :nop,
+    :product,
+    :prompt,
+    :response
+)
+]]></db:sql>
+				<db:input-parameters><![CDATA[#[{
+    batch_num: vars.batch_num.get_next_batch_number[0] as Number,
+    brand: vars.brand,
+    segment: vars.segment,
+    nop: vars.numBatch as Number,
+    product: vars.parsed,
+    prompt: vars.prompt,
+    response: vars.response
+}]]]></db:input-parameters>
+			</db:insert>
+			<ee:transform doc:name="Transform Message" doc:id="92e76bb0-b409-44f9-9947-988ede7edea1">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+read(vars.parsed,'application/json')]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message" doc:id="822b7cb3-383a-4361-b9f5-f99154d23fab" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="products-images-find" doc:id="33ffdf7c-5d97-4b30-b42e-7c43404bc7d2" >
+		<http:listener doc:name="Listener" doc:id="eb370ad0-e84a-4a86-9df7-9eea9d0421b1" config-ref="HTTP_Listener_config" path="/products/images/find"/>
+		<set-variable value="#[attributes.queryParams.prodid]" doc:name="Set Variable" doc:id="f93c8ddd-78a8-41c0-958f-f19d1de8fc6e" variableName="prodid"/>
+		<db:select doc:name="Select" doc:id="b8198e74-d63a-4024-8752-82b3a0df8b41" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT id, "name", price, category, product_type, brand, collection, color, description, dimensions
+FROM public.products
+where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.prodid
+}]]]></db:input-parameters>
+		</db:select>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="8d1e05ee-1051-47b0-9a1e-2171ff5f37c6" variableName="product"/>
+		<logger level="INFO" doc:name="Logger" doc:id="29055a17-cb2b-4e5a-be17-dfb883357a41" message="Fiindng images for product: #[payload]" />
+		<choice doc:name="Choice" doc:id="dcf4782b-490d-4c0a-b6fd-8e73f3ba464e" >
+			<when expression="!isEmpty(p('mac.openai_key'))" >
+				<set-variable value="#[true as Boolean]" doc:name="Set Model = OpenAI" doc:id="526e9106-3788-4a76-9858-2c04f215e9df" variableName="openai" />
+			</when>
+			<otherwise >
+				<set-variable value="#[false as Boolean]" doc:name="Set Model = other" doc:id="5525221b-93cf-4671-b625-42a531e76300" variableName="openai" />
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Log Model" doc:id="96a328e2-bece-41fe-b181-40b431608c4f" message="Using OpoenAI = #[vars.openai]" />
+		<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;&#10;var prompt = readUrl(&quot;classpath://images_prompt.txt&quot;,&quot;text/plain&quot;)&#10;&#10;output text/plain&#10;---&#10;replaceAll(prompt  as String default &quot;&quot;,'&lt;product&gt;',vars.product as String default &quot;&quot;)]" doc:name="Prompt" doc:id="ed7a9857-cbb9-42b5-abc8-b181e0f5c6df" variableName="prompt" />
+		<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;[{&#10;	role : "user" ,&#10;	content : vars.prompt&#10;}]]' doc:name="Set Payload" doc:id="b9cd097d-cb2d-43ba-907a-cd3a964dc98f" />
+		<choice doc:name="Choice" doc:id="55404997-060d-4e56-a111-0e508771307b">
+				<when expression="#[vars.openai]">
+					<ms-inference:chat-completions doc:name="Call OpenAI" doc:id="66c6fed5-f1cd-4e11-87ec-2be48fbae122" config-ref="MuleSoft_Inference_Text_generation_config">
+						<repeatable-in-memory-stream />
+					</ms-inference:chat-completions>
+				</when>
+				<otherwise>
+					<ms-inference:chat-completions doc:name="Call Heroku AI" doc:id="2ada985c-dfdb-4908-a966-bc5073e8dc37" config-ref="Heroku_Inference">
+						<repeatable-in-memory-stream />
+					</ms-inference:chat-completions>
+				</otherwise>
+			</choice>
+		<logger level="DEBUG" doc:name="Logger1" doc:id="ed09863a-3e87-475c-888c-fd385f8f59a3" message="#[payload]" />
+		<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;---&#10;if (payload.response is Object)&#10;	write(payload.response, 'text/plain')&#10;else&#10;	replaceAll(replaceAll(payload.response,'```json',''),'```','') as String default &quot;&lt;&lt;&lt;NO CONTENT&gt;&gt;&gt;&quot;]" doc:name="Parsed Response" doc:id="1d847122-c657-4eea-b933-3e11b000375e" variableName="parsed" />
+		<ee:transform doc:name="Transform Message" doc:id="e5ac292e-ec0a-410f-957d-80243c090ac3">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+read(vars.parsed,'application/json')]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+	</flow>
+	<flow name="loyalty-get-products" doc:id="3127ee30-b1de-4888-9bd7-50274594fc8b" >
+		<http:listener doc:name="GET /loyalty/products" doc:id="3559fcd2-c43f-4a40-8d98-bd9e7e73c9ee" path="/loyalty/products" config-ref="HTTP_Listener_config" allowedMethods="GET"/>
+		<set-variable value='#[attributes.queryParams.catalog as String default ""]' doc:name="Set Variable" doc:id="9d70908a-4573-4ca6-84e4-8ce7fa37f096" variableName="catalog" />
+		<choice doc:name="Choice" doc:id="a57cbc86-a2f8-49b6-90d6-2c18b25c9f98" >
+			<when expression="#[isEmpty(vars.catalog)]">
+				<salesforce:query doc:name="Select all Product" doc:id="44228fd9-105a-4fec-8003-89c0809d9a4e" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
+ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
+ProductId , Product.Id, Product.Name, 
+Product.Description,
+Product.Image_URL__c,
+Product.Warranty__c, 
+Product.Item_Short_Description__c,
+Product.External_ID__c,
+Product.Inventory_Level__c,
+Product.StockKeepingUnit
+from ProductCategoryProduct
+]]></salesforce:salesforce-query>
+		</salesforce:query>
+			</when>
+			<otherwise >
+				<salesforce:query-all doc:name="Select products by Catalog/Brand" doc:id="f4403bd8-a413-46a0-8ed4-2d7e62413107" config-ref="Salesforce_Config" >
+					<salesforce:salesforce-query ><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
+ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
+ProductId , Product.Id, Product.Name, 
+Product.Description,
+Product.Image_URL__c,
+Product.Warranty__c, 
+Product.Item_Short_Description__c,
+Product.External_ID__c,
+Product.Inventory_Level__c,
+Product.StockKeepingUnit
+from ProductCategoryProduct
+where ProductCategoryid in (
+select id
+from ProductCategory
+where catalogid = ':catalogid'
+)]]></salesforce:salesforce-query>
+					<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"catalogid" : vars.catalog
+}]]]></salesforce:parameters>
+				</salesforce:query-all>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Transform Message" doc:id="63f2564f-51f2-4a5a-937a-ece1ca68d499" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item) -> {
+	product_name: item.Product.Name default "",
+	sku: item.Product.StockKeepingUnit default "",
+	brand: item.ProductCategory.Catalog.Name default "",
+	collection: item.ProductCategory.Name default "",
+	description: item.Product.Description default "",
+	pricing: {
+		everyday_price: "",
+		member_price: "",
+		suggested_monthly_payment: "",
+		financing_terms: ""
+	},
+	dimensions: {
+		dimensions: "",
+		details: {
+			height: "",
+			width: "",
+			depth: "",
+			seat_height: "",
+			seat_depth: "",
+			arm_height: "",
+			weight: ""
+		}
+	},
+	features: [],
+	materials: [],
+	finish: [["finish_color", ""]],
+	style: "",
+	availability: "In Stock",
+	images: {
+		main_image_url: item.Product.Image_URL__c default "",
+		additional_images: []
+	},
+	delivery_options: [],
+	warranty: item.Product.Warranty__c,
+	special_features: [],
+	care_instructions: {
+		warranty_note: ""
+	},
+	retailer: {
+		name: item.ProductCategory.Catalog.Name default "",
+		location: "",
+		url: ""
+	},
+	sf_id: item.ProductId
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="29df316d-9c80-483f-a854-27d27a159e5a" variableName="products"/>
+		<set-variable value="#[%dw 2.0&#10;output text/plain&#10;&#10;---&#10;payload.sf_id map (&quot;'&quot; ++ $ ++ &quot;'&quot;) joinBy  &quot;,&quot;]" doc:name="Set Variable" doc:id="f9de15af-857b-480d-99ad-adcd0fc2fa8c" variableName="ids"/>
+		<logger level="INFO" doc:name="Log Ids" doc:id="d65d336c-a565-45d5-85e7-e13e52cabf4d" message="Ids: #{#[vars.ids]"/>
+		<salesforce:query-all doc:name="Get Pricing for all Products" doc:id="d2169d5a-b288-4347-bd4b-4b00c0c26aeb" config-ref="Salesforce_Config" target="pricing">
+			<salesforce:salesforce-query ><![CDATA[SELECT 
+  Product2Id, IsActive, UnitPrice, UseStandardPrice, 
+  Pricebook2Id, Pricebook2.Name, Pricebook2.Description, Pricebook2.IsActive, Pricebook2.IsStandard, 
+  Product2.Name, Product2.Description, Product2.Family, Product2.ProductCode, Product2.IsActive
+FROM PricebookEntry
+WHERE Product2.Id IN (:ids)]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"ids" : vars.ids
+}]]]></salesforce:parameters>
+		</salesforce:query-all>
+		<ee:transform doc:name="Transform Message" doc:id="660713b4-26a8-456a-802f-80659940a505" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload ++ vars.pricing]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="products-get-loyalty-load-pos" doc:id="485929c9-015d-4967-8e22-ecf465d2d978" >
+		<http:listener doc:name="/loyalty/products/load" doc:id="27ae9210-e180-45c7-9e4e-179f38e60561" config-ref="HTTP_Listener_config" path="/loyalty/products/load"/>
+		<set-variable value='#[attributes.queryParams.catalog as String default ""]' doc:name="Set Variable" doc:id="b76183f0-c8cd-4b6a-bd27-2f135a2125da" variableName="catalog" />
+		<salesforce:query doc:name="SelectProducts by Brand" doc:id="631a7e2d-4c6d-4646-9bdb-950ad4fb8c4e" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
+ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
+ProductId , Product.Id, Product.Name, 
+Product.Description,
+Product.Image_URL__c,
+Product.Warranty__c, 
+Product.Item_Short_Description__c,
+Product.External_ID__c,
+Product.Inventory_Level__c,
+Product.StockKeepingUnit
+from ProductCategoryProduct
+where ProductCategoryid in (
+select id
+from ProductCategory
+where catalogid = ':catalogid'
+)]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"catalogid" : vars.catalog
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="2b4aac07-6329-4288-97e8-138d20a601b4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item) -> {
+	product_name: item.Product.Name default "",
+	sku: item.Product.StockKeepingUnit default "",
+	brand: item.ProductCategory.Catalog.Name default "",
+	collection: item.ProductCategory.Name default "",
+	description: item.Product.Description default "",
+	pricing: {
+		everyday_price: "",
+		member_price: "",
+		suggested_monthly_payment: "",
+		financing_terms: ""
+	},
+	stock: item.Product.Inventory_Level__c as Number default 0,
+	dimensions: {
+		dimensions: "",
+		details: {
+			height: "",
+			width: "",
+			depth: "",
+			seat_height: "",
+			seat_depth: "",
+			arm_height: "",
+			weight: ""
+		}
+	},
+	features: [],
+	materials: [],
+	finish: [["finish_color", ""]],
+	style: "",
+	availability: "In Stock",
+	images: {
+		main_image_url: item.Product.Image_URL__c default "",
+		additional_images: []
+	},
+	delivery_options: [],
+	warranty: item.Product.Warranty__c,
+	special_features: [],
+	care_instructions: {
+		warranty_note: ""
+	},
+	retailer: {
+		name: item.ProductCategory.Catalog.Name default "",
+		location: "",
+		url: ""
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="14fdf29f-ffdb-450b-b1a3-ef5a26044766" name="product-import-flow"/>
+	</flow>
+	<flow name="products-get-catalog" doc:id="178b0303-3860-4567-b4db-831ba6d8bc8e" >
+		<http:listener doc:name="Listener" doc:id="4d282420-2a1d-420c-bf13-c60bb08c30c8" config-ref="HTTP_Listener_config" path="/loyalty/catalogs"/>
+		<salesforce:query-all doc:name="Get all Catalogs" doc:id="4b041de5-5500-407e-8bb3-594b2ed5a95e" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[select id, CatalogType, Code, Description, Name
+from ProductCatalog]]></salesforce:salesforce-query>
+		</salesforce:query-all>
+		<ee:transform doc:name="Transform Message" doc:id="1bfe5350-4ccf-4bb9-ab9e-f858a8b6e877" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

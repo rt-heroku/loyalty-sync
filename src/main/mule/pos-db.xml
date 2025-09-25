@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="pos-get-products" doc:id="0807bfbf-46f7-4a29-9a29-314b77d9bcdd" >
+		<http:listener doc:name="GET products" doc:id="ab556e60-cb31-4060-a156-73d14fc07ce5" path="/pos/products" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select all Products" doc:id="0eff8192-7fc0-40c3-afeb-b8ec94acccda" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from products]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="JSON Output" doc:id="0ad0412f-098f-48a3-ab8d-4639b2bd7102" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pos-get-customers" doc:id="201b6115-a1b9-40ba-beb4-ef63eb561cc7" >
+		<http:listener doc:name="Listener" doc:id="6d20e445-4579-444e-8592-e86abe35ba0a" path="/pos/customers" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select all customers" doc:id="4378ecf7-173c-410b-9759-77c3c3fc2dcf" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from customers]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="b839c567-3aa5-442d-ae56-c11b1eee3470" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pos-get-transactions" doc:id="97e3bd9f-74df-4f35-8277-584dbcd39c94" >
+		<http:listener doc:name="Listener" doc:id="bb765877-6f55-4bba-83ba-5523dbc771b9" path="/pos/transactions" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select Transactions" doc:id="91b8c9d8-b15f-4a93-aea3-083512981c1b" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM transactions]]></db:sql>
+		</db:select>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="54b4e8f2-96b5-4881-b43e-6a57b2c9f265" collection="#[payload]" >
+			<logger level="INFO" doc:name="Logger" doc:id="b7b76af3-e0ef-491e-8ad2-69ad50185f56" message="#[payload]" />
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="4d8b75db-1a32-4d5b-8bbc-128f739eb23c" variableName="original" />
+			<db:select doc:name="Select Transaction Items" doc:id="5654a2cd-1ac0-4c85-b295-19f5d46be1ce" config-ref="Database_Config">
+				<db:sql ><![CDATA[SELECT * FROM transaction_items WHERE transaction_id = :id]]></db:sql>
+				<db:input-parameters ><![CDATA[#[output application/java
+---
+{
+	id: vars.original.id
+}]]]></db:input-parameters>
+			</db:select>
+			<ee:transform doc:name="Add items to transaction" doc:id="9976b795-e9a8-4299-924a-6e73e3d57020" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+	vars.original ++	
+		"items": payload
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="JSON Output" doc:id="8da63884-bc26-44e9-9902-db0c3915de70" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="pos-get-transactions-by-user" doc:id="34b596e3-e56b-4726-934f-658061e47d5e" >
+		<http:listener doc:name="Listener" doc:id="1c66ed80-86a4-4f7c-a349-8814f7565647" path="/pos/transactions/{user}" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select Transactions by email" doc:id="9963bbbd-18fa-4c1c-bf3e-1cf2a96df035" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from transactions t 
+where t.customer_id = (select c.id from users u, customers c where c.user_id = u.id and u.email = :user);]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{ user: attributes.uriParams.'user' }]]]></db:input-parameters>
+		</db:select>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="eca8a0d1-98de-4142-948a-67c9385c3654" collection="#[payload]" >
+			<logger level="INFO" doc:name="Logger" doc:id="dde6295a-9b43-45f4-b634-8a29f3bd2d1b" message="#[payload]" />
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="c63fec87-0739-4008-b462-7789889176e9" variableName="original" />
+			<db:select doc:name="Select Transaction Items" doc:id="747490fc-1100-4df6-a1cd-67ff1b24f06b" config-ref="Database_Config">
+				<db:sql ><![CDATA[SELECT * FROM transaction_items WHERE transaction_id = :id]]></db:sql>
+				<db:input-parameters ><![CDATA[#[output application/java
+---
+{
+	id: vars.original.id
+}]]]></db:input-parameters>
+			</db:select>
+			<ee:transform doc:name="Add items to transaction" doc:id="b448c732-8135-4f3f-b4f7-e8ca39e133ed" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+	vars.original ++	
+		"items": payload
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="JSON Output" doc:id="93f39f93-740c-458c-851d-bbcde2353675" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

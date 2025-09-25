@@ -1,0 +1,9 @@
+http:
+    host: "0.0.0.0"
+    port: "8081"
+    path: "/"
+mac:
+  heroku:
+    inference_key:"xxxxxx""
+  send_batches_size: "5"
+  openai_key: "xxxxxx"

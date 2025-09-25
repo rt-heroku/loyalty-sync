@@ -1,0 +1,187 @@
+{
+	"product_name": "Carianna Leather Sofa",
+	"sku": "ASH-5760438",
+	"brand": "Ashley",
+	"collection": "Carianna Leather Stationary",
+	"description": "Merging traditional motifs with a modern hue, the Carianna sofa ties your transitional seating area together. Classic roll arms decorated with nailhead trim bookend the comfortable cushions for a bit of extra flair. It's approachable, yet luxurious. With this well-dressed sofa, everyday relaxation gets a distinctive upgrade.",
+	"pricing": {
+		"everyday_price": "$1,528",
+		"member_price": "$1,299",
+		"suggested_monthly_payment": "$128.00",
+		"financing_terms": "12 months special financing"
+	},
+	"dimensions": {
+		"dimensions": "Overall: 101\"W x 40\"D x 40\"H; Seat: 23\"D x 22\"H; Arm: 28\"H",
+		"details": {
+			"height": "40.00 inches",
+			"width": "101.00 inches",
+			"depth": "40.00 inches",
+			"seat_height": "22.00 inches",
+			"seat_depth": "23.00 inches",
+			"arm_height": "28.00 inches",
+			"weight": "191.00 lbs"
+		}
+	},
+	"features": [
+
+		[
+			"Back",
+			"Attached Back"
+		],
+
+		[
+			"Arm",
+			"Roll Arm"
+		],
+
+		[
+			"Seat",
+			"Loose Seat"
+		],
+
+		[
+			"Technology",
+			"Stationary"
+		],
+
+		[
+			"Type",
+			"Stationary"
+		],
+
+		[
+			"Leg",
+			"Round"
+		],
+
+		[
+			"Pillows",
+			"4 Pillows"
+		]
+	],
+	"materials": [
+
+		[
+			"Frame",
+			"Wood"
+		],
+
+		[
+			"Leg",
+			"Wood"
+		],
+
+		[
+			"Upholstery Cover",
+			"Leather"
+		]
+	],
+	"finish": {
+		"finish_color": "Black",
+		"upholstery_color": "Brown",
+		"pattern": "Solid"
+	},
+	"style": "Traditional",
+	"availability": "In Stock",
+	"images": {
+		"main_image_url": "https://www.mathishome.com/dw/image/v2/AAYQ_PRD/on/demandware.static/-/Sites-mathisbrothers-master/default/dwcae47f1c/images/products/hires/ASH/ASH-5760438/ASH-5760438_01.jpg?sw=800",
+		"additional_images": [
+
+			{
+				"url": "https://www.mathishome.com/dw/image/v2/AAYQ_PRD/on/demandware.static/-/Sites-mathisbrothers-master/default/dw71a71fc8/images/products/spin/ASH/ASH-5760438/ASH-5760438_02.jpg?sw=800",
+				"alt_text": "Brown transitional style Ashley leather sofa with rolled arms, nailhead trim, and four accent pillows image number 2"
+			},
+
+			{
+				"url": "https://www.mathishome.com/on/demandware.static/Sites-mathisbrothers-Site/-/default/dw306f38c4/images/360View-Thumbnail.jpg",
+				"alt_text": "360 View image number 2"
+			}
+		]
+	},
+	"delivery_options": [
+
+		{
+			"key": "doorstep_dropoff",
+			"type": "Doorstep",
+			"value": "FREE"
+		},
+
+		{
+			"type": "Deluxe delivery Member",
+			"key": "deluxe_delivery_member",
+			"value": "FREE"
+		},
+
+		{
+			"type": "Deluxe Delivery",
+			"key": "deluxe_delivery_regular",
+			"value": "$169+"
+
+		},
+
+		{
+			"key": "elite_delivery_member",
+			"type": "Elite Delivery Member",
+			"value": "$300+"
+		},
+
+		{
+			"key": "elite_delivery_regular",
+			"type": "Elite Delivery Regular",
+			"value": "$400+"
+		},
+
+		{
+			"key": "estimated_delivery",
+			"type": "Estimated Delivery",
+			"value": "08/18/2025"
+		}
+	],
+	"warranty": [
+
+		{
+			"key": "0",
+			"type": "frame",
+			"value": "Lifetime Limited Warranty"
+		},
+
+		{
+			"key": "1",
+			"type": "cushion",
+			"value": "1 Year Limited Warranty"
+		},
+
+		{
+			"key": "2",
+			"type": "upholstery",
+			"value": "1 Year Limited Warranty"
+		},
+
+		{
+			"key": "3",
+			"type": "springs",
+			"value": "5 Year Limited Warranty"
+		},
+
+		{
+			"key": "4",
+			"type": "leather",
+			"value": "1 Year Limited Warranty"
+		}
+	],
+	"special_features": [
+		"Nailhead trim on roll arms",
+		"Comfortable cushions",
+		"Traditional motifs with modern hue",
+		"Transitional style design"
+	],
+	"care_instructions": {
+		"warranty_note": "Leather is a natural product, and variations of shade and tone are to be expected as are the nicks, scratches, and wrinkles that only occur in genuine leather; these characteristics are in no way to be considered a defect."
+	},
+	"retailer": {
+		"name": "Mathis Home",
+		"location": "Oklahoma City, OK",
+		"url": "https://www.mathishome.com/mathis-home/furniture/living-room-furniture/sofas/carianna-leather-sofa/ASH-5760438.html"
+	}
+}
+

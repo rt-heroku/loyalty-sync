@@ -1,0 +1,13 @@
+db:
+  host: ""
+  port: ""
+  user: ""
+  password: ""
+  database: ""
+
+#Salesforce configurations
+sfdc:
+  url: "http://login.salesforce.com/services/Soap/u/64.0"
+  token: ""
+  password: ""
+  account: ""
