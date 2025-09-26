@@ -129,6 +129,73 @@ payload.payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
+	<flow name="products-improve-fields" doc:id="22685ce0-59b1-44f2-bdc7-b936abf0c279" >
+		<http:listener doc:name="POST /products/improve" doc:id="56eb4021-2f19-4ad0-b141-d3a2e5d3474c" config-ref="HTTP_Listener_config" path="/products/improve" allowedMethods="POST"/>
+		<choice doc:name="Choice" doc:id="468a1ba7-3915-4eef-b37d-8ccf9eb7be2f" >
+			<when expression="#[isEmpty(attributes.queryParams.product)]">
+				<db:select doc:name="Select" doc:id="5bf7533a-5435-4c17-ad3d-da3607cc7931" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from products
+]]></db:sql>
+		</db:select>
+			</when>
+			<otherwise >
+				<db:select doc:name="Select" doc:id="e79b1eaa-e33c-4969-bffc-7cd495569b84" config-ref="Database_Config" >
+					<db:sql ><![CDATA[select * from products
+where id = :id]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	id: attributes.queryParams.product
+}]]]></db:input-parameters>
+				</db:select>
+			</otherwise>
+		</choice>
+		<choice doc:name="Choice1" doc:id="d68bd394-7c46-41c7-b1e2-4d69f7b69db3" >
+			<when expression="!isEmpty(p('mac.openai_key'))" >
+				<set-variable value="#[true as Boolean]" doc:name="Set OpenAI = true" doc:id="a5b3ffa5-c615-4750-954c-ea18878f86c8" variableName="openai" />
+			</when>
+			<otherwise >
+				<set-variable value="#[false as Boolean]" doc:name="Set OpenAI = false" doc:id="3492b619-7666-42d2-a36d-d6580b55c117" variableName="openai" />
+			</otherwise>
+		</choice>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="45394f79-1c04-4a84-8a90-7c58e8d0dd5d">
+			<set-variable value='#[%dw 2.0&#10;output text/plain&#10;---&#10;write(payload, "application/json", {indent: false})]' doc:name="Set Variable" doc:id="66a79133-7736-464f-9a4a-7d152dd4fd0c" variableName="record" />
+			<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;&#10;var prompt = readUrl(&quot;classpath://improve_products_prompt.txt&quot;,&quot;text/plain&quot;)&#10;&#10;output text/plain&#10;---&#10;replaceAll(prompt  as String default &quot;&quot;,'&lt;product&gt;', vars.record as String default &quot;&quot;)]" doc:name="Prompt" doc:id="29059d99-0d8b-4523-95f6-e210601f00db" variableName="prompt" />
+			<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;[{&#10;	role : "user" ,&#10;	content : vars.prompt&#10;}]]' doc:name="Set Payload" doc:id="3bf3519c-4561-4f36-aa92-4ff464259a1f" />
+			<logger level="INFO" doc:name="Logger" doc:id="495c03ce-433f-4cbc-a2a1-c3dc890f8cec" message="#[payload]"/>
+			<choice doc:name="Choice" doc:id="9c079c6d-bd78-4427-becf-492f17c197b6">
+			<when expression="#[vars.openai]">
+				<ms-inference:chat-completions doc:name="Call OpenAI" doc:id="7605d6fc-0cad-45ac-ad33-f55b0de1ffc0" config-ref="MuleSoft_Inference_Text_generation_config">
+					<repeatable-in-memory-stream />
+				</ms-inference:chat-completions>
+			</when>
+			<otherwise>
+				<ms-inference:chat-completions doc:name="Call Heroku AI" doc:id="f4799dd2-5704-4592-8ea0-968f5be00c8b" config-ref="Heroku_Inference">
+					<repeatable-in-memory-stream />
+				</ms-inference:chat-completions>
+			</otherwise>
+		</choice>
+			<logger level="INFO" doc:name="Logger" doc:id="20988fcc-5d5f-48ec-9cb6-fd595a6d17d8" message="payload from LLM: #[payload]"/>
+			<set-payload value="#[%dw 2.0 &#10;import replaceAll from dw::core::Strings&#10;output application/json&#10;---&#10;if (payload.response is Object)&#10;	payload.response&#10;else&#10;	read(&#10;		replaceAll(replaceAll(payload.response,'```json',''),'```','') as String default &quot;{error: \&quot;No Content\&quot;}&quot;&#10;		,&quot;application/json&quot;&#10;	)]" doc:name="Set Payload" doc:id="4b98da69-1079-402e-886d-f12b948e03e8" />
+			<parallel-foreach doc:name="Parallel For Each" doc:id="0920996c-998b-4499-90c0-933041f136e3" >
+				<flow-ref doc:name="Flow Reference" doc:id="fe397f17-7735-42d6-a82b-49adc16b7ac3" name="product-process-import" />
+			</parallel-foreach>
+			<ee:transform doc:name="Transform Message" doc:id="3ab7600f-2787-46bb-b4d9-e8fb5580ee3c" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message" doc:id="6f71fa3b-16aa-4bf2-8978-bbfc7ec53d1e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
 	<flow name="products-images-find" doc:id="33ffdf7c-5d97-4b30-b42e-7c43404bc7d2" >
 		<http:listener doc:name="Listener" doc:id="eb370ad0-e84a-4a86-9df7-9eea9d0421b1" config-ref="HTTP_Listener_config" path="/products/images/find"/>
 		<set-variable value="#[attributes.queryParams.prodid]" doc:name="Set Variable" doc:id="f93c8ddd-78a8-41c0-958f-f19d1de8fc6e" variableName="prodid"/>
@@ -153,6 +220,7 @@ where id = :id]]></db:sql>
 		<logger level="INFO" doc:name="Log Model" doc:id="96a328e2-bece-41fe-b181-40b431608c4f" message="Using OpoenAI = #[vars.openai]" />
 		<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;&#10;var prompt = readUrl(&quot;classpath://images_prompt.txt&quot;,&quot;text/plain&quot;)&#10;&#10;output text/plain&#10;---&#10;replaceAll(prompt  as String default &quot;&quot;,'&lt;product&gt;',vars.product as String default &quot;&quot;)]" doc:name="Prompt" doc:id="ed7a9857-cbb9-42b5-abc8-b181e0f5c6df" variableName="prompt" />
 		<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;[{&#10;	role : "user" ,&#10;	content : vars.prompt&#10;}]]' doc:name="Set Payload" doc:id="b9cd097d-cb2d-43ba-907a-cd3a964dc98f" />
+		<logger level="INFO" doc:name="Logger" doc:id="25803123-4a53-4018-bba3-0d3a80931804" message="#[payload]"/>
 		<choice doc:name="Choice" doc:id="55404997-060d-4e56-a111-0e508771307b">
 				<when expression="#[vars.openai]">
 					<ms-inference:chat-completions doc:name="Call OpenAI" doc:id="66c6fed5-f1cd-4e11-87ec-2be48fbae122" config-ref="MuleSoft_Inference_Text_generation_config">

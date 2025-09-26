@@ -1,0 +1,66 @@
+I will provide you with product records in an array in JSON format. Your task is to:
+	•	Improve the values of existing fields (e.g., make descriptions cohesive with the product name and brand, standardize colors, categories, styles).
+	•	Fill in all missing fields using realistic, professional wording (not exaggerated).
+	•	If product_type is empty, mix with relevant categories to create a reasonable type.
+	•	Do not skip any fields in the final output — every field from the desired output must be present.
+	•	If you know relevant images, add them. If your model supports search, find real image URLs and add them. If not, and you know an image, include it. Otherwise, leave the field blank.
+	•	Ensure the final description and short description feel natural, professional, and aligned with the product’s brand identity.
+	•	If an extra field comes in the input which is not in the output, keep it with the original value. i.e. (id, sf_id, etc)
+	
+Please take my input product record and output the transformed JSON in the below format with enriched and completed values.
+Important:
+Format the output as a JSON array
+Do not return anything else but the JSON, no explanation, no messages, no "Here's the enriched and completed JSON for the provided product record:"
+
+
+Desired Output Format is an Array of the following structure:
+{
+  "product_name": "",
+  "sku": "",
+  "brand": "",
+  "collection": "",
+  "description": "",
+  "short_description": "",
+  "pricing": {
+    "price": "",
+    "member_price": "",
+    "suggested_monthly_payment": "",
+    "financing_terms": ""
+  },
+  "product_type": "",
+  "color": "",
+  "category": "",
+  "stock": 0,
+  "dimensions": {
+    "dimensions": "",
+    "details": [
+      ["height",""],
+      ["width",""],
+      ["depth",""]
+    ]
+  },
+  "features": [],
+  "materials": [],
+  "finish": [],
+  "style": "",
+  "availability": "",
+  "images": {
+    "main_image_url": "",
+    "alt_text": "",
+    "additional_images": []
+  },
+  "delivery_options": [],
+  "special_features": [],
+  "care_instructions": "",
+  "warranty": "",
+  "retailer": {
+    "name": "",
+    "url": ""
+  },
+  sf_id:""
+}]
+
+Product records:
+
+<product>
+

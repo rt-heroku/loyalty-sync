@@ -189,7 +189,7 @@ var productData = payload.data
 
 				<!-- Handle SKU conflict -->
 				<choice doc:name="SKU Check" doc:id="b009edfa-89fc-4880-9c36-41319018e4dd">
-					<when expression="#[sizeOf(payload) > 0]">
+					<when expression="#[sizeOf(payload) &lt; 0]">
 						<ee:transform doc:name="SKU Conflict Response" doc:id="6359db63-a357-4d33-8eec-eecefc28647a">
 							<ee:message>
 								<ee:set-payload><![CDATA[%dw 2.0
@@ -208,9 +208,36 @@ output application/json
 						<!-- Insert into products table -->
 						<logger level="INFO" doc:name="Logger" doc:id="d4cda785-902a-4f9d-b278-bf2d20ed5182" message="Product to insert #[output application/json --- vars.product]"/>
 						<db:insert doc:name="Insert Product" doc:id="f3d3b743-8b02-4eb8-8a27-10aaebcab697" config-ref="Database_Config" autoGenerateKeys="true">
-							<db:sql><![CDATA[INSERT INTO products ("name", price, category, stock, sku, brand, collection, description, dimensions, weight, main_image_url, is_active, featured, sort_order, warranty_info, care_instructions, color, product_type, sf_id) 
-VALUES (:name, :price, :category, :stock, :sku, :brand, :collection, :description, :dimensions, :weight, :main_image_url, :is_active, :featured, :sort_order, :warranty, :care, :color, :product_type, :sf_id) 
-RETURNING id]]></db:sql>
+							<db:sql><![CDATA[INSERT INTO products (
+    "name", price, category, stock, sku, brand, collection, description, 
+    dimensions, weight, main_image_url, is_active, featured, sort_order, 
+    warranty_info, care_instructions, color, product_type, sf_id
+)
+VALUES (
+    :name, :price, :category, :stock, :sku, :brand, :collection, :description,
+    :dimensions, :weight, :main_image_url, :is_active, :featured, :sort_order,
+    :warranty, :care, :color, :product_type, :sf_id
+)
+ON CONFLICT (sku) DO UPDATE SET
+    "name" = EXCLUDED."name",
+    price = EXCLUDED.price,
+    category = EXCLUDED.category,
+    stock = EXCLUDED.stock,
+    brand = EXCLUDED.brand,
+    collection = EXCLUDED.collection,
+    description = EXCLUDED.description,
+    dimensions = EXCLUDED.dimensions,
+    weight = EXCLUDED.weight,
+    main_image_url = EXCLUDED.main_image_url,
+    is_active = EXCLUDED.is_active,
+    featured = EXCLUDED.featured,
+    sort_order = EXCLUDED.sort_order,
+    warranty_info = EXCLUDED.warranty_info,
+    care_instructions = EXCLUDED.care_instructions,
+    color = EXCLUDED.color,
+    product_type = EXCLUDED.product_type,
+    sf_id = EXCLUDED.sf_id
+RETURNING id;]]></db:sql>
 							<db:input-parameters ><![CDATA[#[vars.product]]]></db:input-parameters>
 						</db:insert>
 
@@ -255,8 +282,17 @@ var additionalImages = productData.dimensions.images.additional_images default [
 								<!-- Insert product images -->
 								<foreach doc:name="Insert Images" doc:id="b1470130-f4ee-4ab9-bf8e-0a343d0b323a">
 									<db:insert config-ref="Database_Config">
-										<db:sql><![CDATA[INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order) 
-VALUES (:product_id, :image_url, :alt_text, :is_primary, :sort_order)]]></db:sql>
+										<db:sql><![CDATA[INSERT INTO product_images (
+    product_id, image_url, alt_text, is_primary, sort_order
+)
+VALUES (
+    :product_id, :image_url, :alt_text, :is_primary, :sort_order
+)
+ON CONFLICT (product_id, image_url) DO UPDATE SET
+    alt_text   = EXCLUDED.alt_text,
+    is_primary = EXCLUDED.is_primary,
+    sort_order = EXCLUDED.sort_order
+RETURNING id;]]></db:sql>
 										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
 									</db:insert>
 									<logger level="DEBUG" doc:name="Log Response" doc:id="7f08ca59-a8b0-4593-b471-1ef96d909f25" message="Response from Insert Images: #[payload]" />
@@ -311,8 +347,15 @@ dimensionFeatures ++ materialFeatures ++ finishFeatures ++ specialFeatures]]></e
 								<!-- Insert product features -->
 								<foreach doc:name="Insert Features" doc:id="f7c4d652-3df0-4692-9680-271fe7cb070f">
 									<db:insert config-ref="Database_Config">
-										<db:sql><![CDATA[INSERT INTO product_features (product_id, feature_name, feature_value) 
-VALUES (:product_id, :feature_name, :feature_value)]]></db:sql>
+										<db:sql><![CDATA[INSERT INTO product_features (
+    product_id, feature_name, feature_value
+)
+VALUES (
+    :product_id, :feature_name, :feature_value
+)
+ON CONFLICT (product_id, feature_name) DO UPDATE SET
+    feature_value = EXCLUDED.feature_value
+RETURNING id;]]></db:sql>
 										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
 									</db:insert>
 									<logger level="DEBUG" doc:name="Log Response" doc:id="b3c4f1f8-1bfb-4b9b-801a-61f31309c6e3" message="Response from Insert Features: #[payload]" />
