@@ -130,7 +130,16 @@ payload.payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="products-improve-fields" doc:id="22685ce0-59b1-44f2-bdc7-b936abf0c279" >
-		<http:listener doc:name="POST /products/improve" doc:id="56eb4021-2f19-4ad0-b141-d3a2e5d3474c" config-ref="HTTP_Listener_config" path="/products/improve" allowedMethods="POST"/>
+		<http:listener doc:name="POST /products/improve" doc:id="56eb4021-2f19-4ad0-b141-d3a2e5d3474c" config-ref="HTTP_Listener_config" path="/products/improve" allowedMethods="POST">
+			<http:error-response >
+				<http:body ><![CDATA[#[output application/json
+--- 
+{
+	message: error.errorMessage,
+	description: error.description
+}]]]></http:body>
+			</http:error-response>
+		</http:listener>
 		<choice doc:name="Choice" doc:id="468a1ba7-3915-4eef-b37d-8ccf9eb7be2f" >
 			<when expression="#[isEmpty(attributes.queryParams.product)]">
 				<db:select doc:name="Select" doc:id="5bf7533a-5435-4c17-ad3d-da3607cc7931" config-ref="Database_Config">
@@ -192,7 +201,7 @@ payload.payload]]></ee:set-payload>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-payload.payload]]></ee:set-payload>
+payload.payload[0]]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>

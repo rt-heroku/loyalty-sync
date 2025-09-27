@@ -39,9 +39,13 @@ Desired Output Format is an Array of the following structure:
       ["depth",""]
     ]
   },
-  "features": [],
-  "materials": [],
-  "finish": [],
+	"features": [["Expansion","15.0\" Expanded Depth"]],
+	"materials": [
+		["Primary Material","Ballistic Nylon"]
+	],
+	"finish": [
+		["Color","Black"]
+	],
   "style": "",
   "availability": "",
   "images": {

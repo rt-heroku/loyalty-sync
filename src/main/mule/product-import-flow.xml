@@ -247,7 +247,7 @@ RETURNING id;]]></db:sql>
 
 						<!-- Insert product images if they exist -->
 						<choice doc:name="Has Images" doc:id="25be3e90-3e1b-4b1c-8cf7-da539e57b19d">
-							<when expression="#[vars.originalPayload.dimensions.images.main_image_url != null and vars.originalPayload.dimensions.images.main_image_url != '']">
+							<when expression="#[vars.originalPayload.images.main_image_url != null or vars.originalPayload.images.main_image_url != '']">
 								<ee:transform doc:name="Transform Images" doc:id="cf93ee88-26b4-4f47-8c11-aa5cb4ff8d6e">
 									<ee:message>
 										<ee:set-payload><![CDATA[%dw 2.0
@@ -259,14 +259,14 @@ var productId = vars.productId
 // Main image
 var mainImage = {
 	"product_id": productId,
-	"image_url": productData.dimensions.images.main_image_url,
-	"alt_text": productData.dimensions.images.alt_text default "",
+	"image_url": productData.images.main_image_url,
+	"alt_text": productData.images.alt_text default "",
 	"is_primary": true,
 	"sort_order": 0
 }
 
 // Additional images
-var additionalImages = productData.dimensions.images.additional_images default [] map (image, index) -> {
+var additionalImages = productData.images.additional_images default [] map (image, index) -> {
 	"product_id": productId,
 	"image_url": image.url,
 	"alt_text": image.alt_text default "",
@@ -292,17 +292,21 @@ ON CONFLICT (product_id, image_url) DO UPDATE SET
     alt_text   = EXCLUDED.alt_text,
     is_primary = EXCLUDED.is_primary,
     sort_order = EXCLUDED.sort_order
-RETURNING id;]]></db:sql>
+]]></db:sql>
 										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
 									</db:insert>
 									<logger level="DEBUG" doc:name="Log Response" doc:id="7f08ca59-a8b0-4593-b471-1ef96d909f25" message="Response from Insert Images: #[payload]" />
 								</foreach>
 							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Logger" doc:id="9ae54c40-8879-4765-8c7e-47a4901534e5" message="No images to add for productId: #[vars.productId]"/>
+							</otherwise>
 						</choice>
 
 						<!-- Insert product features if they exist -->
 						<choice doc:name="Has Features" doc:id="33e1cd27-d699-405f-a6cf-bfc2b2e8a067">
-							<when expression="#[sizeOf(vars.originalPayload.dimensions.features default []) > 0 or sizeOf(vars.originalPayload.dimensions.materials default []) > 0 or sizeOf(vars.originalPayload.dimensions.finish default []) > 0]">
+							<when expression="#[sizeOf(vars.originalPayload.features default []) &gt; 0 or sizeOf(vars.originalPayload.materials default []) &gt; 0 or sizeOf(vars.originalPayload.finish default []) &gt; 0]">
+								<logger level="INFO" doc:name="Logger" doc:id="078fda7e-d98b-412e-9729-cf5d065a88fb" message="Inserting Features for productid: #[vars.productId]"/>
 								<ee:transform doc:name="Transform Features" doc:id="76d7e44f-7480-44d2-8e0f-affeb17a3702">
 									<ee:message>
 										<ee:set-payload><![CDATA[%dw 2.0
@@ -312,28 +316,28 @@ var productData = vars.originalPayload
 var productId = vars.productId
 
 // Extract features from dimensions
-var dimensionFeatures = productData.dimensions.features default [] map (feature) -> {
+var dimensionFeatures = productData.features default [] map (feature) -> {
 	"product_id": productId,
 	"feature_name": feature[0],
 	"feature_value": feature[1]
 }
 
 // Extract materials
-var materialFeatures = productData.dimensions.materials default [] map (material) -> {
+var materialFeatures = productData.materials default [] map (material) -> {
 	"product_id": productId,
 	"feature_name": "Material: " ++ material[0],
 	"feature_value": material[1]
 }
 
 // Extract finish
-var finishFeatures = productData.dimensions.finish default [] map (finish) -> {
+var finishFeatures = productData.finish default [] map (finish) -> {
 	"product_id": productId,
 	"feature_name": "Finish: " ++ finish[0],
 	"feature_value": finish[1]
 }
 
 // Extract special features
-var specialFeatures = productData.dimensions.special_features default [] map (feature, index) -> {
+var specialFeatures = productData.special_features default [] map (feature, index) -> {
 	"product_id": productId,
 	"feature_name": "Special Feature " ++ (index + 1),
 	"feature_value": feature
@@ -345,6 +349,7 @@ dimensionFeatures ++ materialFeatures ++ finishFeatures ++ specialFeatures]]></e
 								</ee:transform>
 
 								<!-- Insert product features -->
+								<logger level="INFO" doc:name="Log Payload" doc:id="7cc4ae8a-6ccb-4b3b-ac22-2bb3ac24f718" message="Features #[payload]"/>
 								<foreach doc:name="Insert Features" doc:id="f7c4d652-3df0-4692-9680-271fe7cb070f">
 									<db:insert config-ref="Database_Config">
 										<db:sql><![CDATA[INSERT INTO product_features (
@@ -355,12 +360,15 @@ VALUES (
 )
 ON CONFLICT (product_id, feature_name) DO UPDATE SET
     feature_value = EXCLUDED.feature_value
-RETURNING id;]]></db:sql>
+]]></db:sql>
 										<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
 									</db:insert>
 									<logger level="DEBUG" doc:name="Log Response" doc:id="b3c4f1f8-1bfb-4b9b-801a-61f31309c6e3" message="Response from Insert Features: #[payload]" />
 								</foreach>
 							</when>
+							<otherwise >
+								<logger level="INFO" doc:name="Logger" doc:id="30c1e6b8-6b63-4cf8-bdc7-a26c1c26b5de" message="No features to add for productid: #[vars.productId]"/>
+							</otherwise>
 						</choice>
 
 						<!-- Return success response -->

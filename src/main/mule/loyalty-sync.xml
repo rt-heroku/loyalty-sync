@@ -772,6 +772,37 @@ payload]]></ee:set-payload>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger" doc:id="51539758-1459-480c-b07a-c10a708e110f" message="Record Sent to salesforce #[payload]"/>
 	</flow>
+	<flow name="loyalty-update_sf_products" doc:id="b34a97f0-ab6a-4a5f-88e3-91497e1c7cce" >
+		<db:listener table="products" doc:name="On Modified Product" doc:id="f572a5e9-7f80-470c-8e10-5be0610947fa" config-ref="Database_Config" watermarkColumn="updated_at" idColumn="id">
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" startDelay="1" timeUnit="SECONDS" />
+			</scheduling-strategy>
+		</db:listener>
+		<choice doc:name="Choice" doc:id="c9478a13-d5cd-43a0-82e8-34b36864fe86" >
+			<when expression="#[!isEmpty(payload.sf_id)]">
+				<set-variable value="#[payload]" doc:name="Set Product" doc:id="4c61c9c9-7c20-4785-bf85-f3617efaf187" variableName="product"/>
+				<ee:transform doc:name="Set Attributes" doc:id="73dd4edd-1be3-4189-b65b-61b23de4f5a0">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+						<ee:set-attributes ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	product: vars.product.id
+}]]></ee:set-attributes>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="Process Product" doc:id="30e9928c-9f81-487e-b403-8f040836f4b0" name="loyalty-products-send" />
+				<logger level="INFO" doc:name="Logger" doc:id="827c20e3-71af-4bec-8309-68859c88fb9d" message="Product[#[vars.product.id] -  #[vars.product.name]] successfully sent to SF!"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Nothing to Log" doc:id="eef74932-3eed-43c0-abe9-93dc5e646f98" message="Product[#[payload.id] -  #[payload.name]] not in salesforce, ommited!"/>
+			</otherwise>
+		</choice>
+	</flow>
 	<sub-flow name="get-transactions" doc:id="7c96e303-b0f9-44c3-afbe-f162a9a5509e" >
 		<ee:transform doc:name="Transform Message" doc:id="9f09a70d-31b4-4ba8-b581-2297b8cfc820" >
 			<ee:message >
