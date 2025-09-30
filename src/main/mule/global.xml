@@ -49,7 +49,11 @@ http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/
 		<file:connection workingDir="/Users/rodrigo.torres/mulesoft-work/mac-chain/files" />
 	</file:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="0eb8e850-8f74-4eeb-96d8-f87023b3e89f" file="config/config.yaml" />
+<<<<<<< HEAD
+	<global-property doc:name="Global Property" doc:id="63c01cfd-c853-449d-9956-3a49d6ae08e3" name="env" value="prod" />
+=======
 	<global-property doc:name="Global Property" doc:id="63c01cfd-c853-449d-9956-3a49d6ae08e3" name="env" value="local" />
+>>>>>>> parent of 45ef9a5 (Removed __c fields)
 	<ms-inference:text-generation-config name="MuleSoft_Inference_Text_generation_config" doc:name="MuleSoft Inference Text generation config" doc:id="dce4c000-948c-41ff-840b-495a9fa6684e" >
 		<ms-inference:openai-connection openAIModelName="gpt-4o" apiKey="${mac.openai_key}" maxTokens="16384" />
 	</ms-inference:text-generation-config>
