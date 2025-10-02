@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" 
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" 
+      xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" 
       xmlns:db="http://www.mulesoft.org/schema/mule/db" 
       xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
-      xmlns:flow-ref="http://www.mulesoft.org/schema/mule/core"
+      xmlns:flow-ref="http://www.mulesoft.org/schema/mule/core" 
       xmlns="http://www.mulesoft.org/schema/mule/core" 
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
                          http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
                          http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
                          http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
-                         http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+                         http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
 
     <!-- Main Flow: loyalty-products-send -->
     <flow name="loyalty-products-send" doc:id="aab77124-619b-4f4a-9682-5b7da4db23d5">
@@ -26,8 +27,9 @@
                       allowedMethods="POST"/>
         
         <!-- Initialize Variables -->
-        <set-variable value="#[attributes.queryParams.product]" variableName="productId" doc:name="Set Product ID"/>
-        <set-variable value="#[{}]" variableName="processingSummary" doc:name="Initialize Summary"/>
+        <set-variable value="#[if (!isEmpty(attributes.product)) attributes.product else attributes.queryParams.product]" variableName="productId" doc:name="Set Product ID"/>
+        <logger level="INFO" doc:name="Logger" doc:id="fe88c61a-c6fd-4b1d-b570-6e77f7d88606" message="loyalty-products-send Sendig product #[vars.productId] to Salesforce"/>
+		<set-variable value="#[{}]" variableName="processingSummary" doc:name="Initialize Summary"/>
         <set-variable value="#[0]" variableName="successCount" doc:name="Initialize Success Count"/>
         <set-variable value="#[0]" variableName="updateCount" doc:name="Initialize Update Count"/>
         <set-variable value="#[0]" variableName="failureCount" doc:name="Initialize Failure Count"/>
@@ -87,7 +89,7 @@ ORDER BY id
         </choice>
         
         <!-- Generate Summary Response -->
-        <logger level="INFO" doc:name="Logger" doc:id="e4d557f7-a679-42a4-b37b-7b938242a222" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.failures]"/>
+        <logger level="DEBUG" doc:name="Logger" doc:id="e4d557f7-a679-42a4-b37b-7b938242a222" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.failures]"/>
 		<ee:transform doc:name="Generate Summary" doc:id="eabab5aa-6402-4a72-9e83-384b6d5ccbff">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -134,287 +136,18 @@ output application/json
     </flow>
 
     <!-- Sub-flow: Process Individual Product -->
-    <flow name="send-productsFlow" doc:id="793e82e9-31b7-441b-bbf4-34340954333d" >
-		<http:listener doc:name="Listener" doc:id="7daaaa7f-5562-4c4e-8f69-0829a4bff614" config-ref="HTTP_Listener_config" path="/test/upsert/product" allowedMethods="POST"/>
-		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="8f6922ae-bb5a-4e79-98fc-863c320977ea" variableName="product"/>
-		<logger level="INFO" doc:name="Logger" doc:id="6c1a6a8f-678e-4ce2-afc6-27fc99021cc2" message="#[output application/json&#10;---&#10;payload]"/>
-		<salesforce:read-metadata doc:name="Read metadata" doc:id="9b6cb27c-73b6-4991-90b5-bdf4b71d123e" config-ref="Salesforce_Config" type="CustomField">
-			<salesforce:full-names ><![CDATA[#[["Product2.Warranty__c"]]]]></salesforce:full-names>
-		</salesforce:read-metadata>
-		<logger level="INFO" doc:name="Logger" doc:id="f03063a7-3de2-4fd9-939e-40dae6c64c4c" message="#[output application/json&#10;---&#10;payload]"/>
-		<ee:transform doc:name="Transform Message" doc:id="73e281ac-41b9-48c3-ad7c-85def4243b80" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-{
-    "defaultValue": null,
-    "deprecated": false,
-    "label__is_set": true,
-    "startingNumber": 0,
-    "writeRequiresMasterRead__is_set": false,
-    "maskChar__is_set": false,
-    "summaryOperation__is_set": false,
-    "lookupFilter": null,
-    "type": "Picklist",
-    "formulaTreatBlanksAs__is_set": false,
-    "required": false,
-    "mktDataModelFieldAttributes": null,
-    "summaryOperation": null,
-    "customDataType__is_set": false,
-    "scale__is_set": false,
-    "customDataType": null,
-    "lookupFilter__is_set": false,
-    "restrictedAdminField": false,
-    "metadataRelationshipControllingField": null,
-    "writeRequiresMasterRead": false,
-    "reparentableMasterDetail": false,
-    "referenceTargetField__is_set": false,
-    "maskType": null,
-    "maskType__is_set": false,
-    "securityClassification": null,
-    "reparentableMasterDetail__is_set": false,
-    "required__is_set": true,
-    "isAIPredictionField__is_set": false,
-    "trackFeedHistory__is_set": true,
-    "externalDeveloperName": null,
-    "complianceGroup__is_set": false,
-    "encryptionScheme": null,
-    "referenceTo": null,
-    "relationshipOrder__is_set": false,
-    "unique": false,
-    "populateExistingRows__is_set": false,
-    "businessOwnerGroup__is_set": false,
-    "maskChar": null,
-    "fieldManageability__is_set": false,
-    "summaryFilterItems__is_set": false,
-    "startingNumber__is_set": false,
-    "translateData__is_set": false,
-    "isNameField": false,
-    "elementType__is_set": false,
-    "businessOwnerGroup": null,
-    "deleteConstraint__is_set": false,
-    "translateData": false,
-    "stripMarkup__is_set": false,
-    "relationshipName__is_set": false,
-    "caseSensitive__is_set": false,
-    "referenceTargetField": null,
-    "visibleLines__is_set": false,
-    "referenceTo__is_set": false,
-    "visibleLines": 0,
-    "fieldManageability": null,
-    "deprecated__is_set": false,
-    "trackHistory__is_set": true,
-    "valueSet__is_set": true,
-    "businessStatus": null,
-    "restrictedAdminField__is_set": false,
-    "complianceGroup": null,
-    "escapeMarkup": false,
-    "trackFeedHistory": false,
-    "externalDeveloperName__is_set": false,
-    "isConvertLeadDisabled": false,
-    "isNameField__is_set": false,
-    "elementType": null,
-    "relationshipLabel": null,
-    "escapeMarkup__is_set": false,
-    "type__is_set": true,
-    "precision": 0,
-    "mktDataModelFieldAttributes__is_set": false,
-    "summarizedField__is_set": false,
-    "trackTrending__is_set": false,
-    "isFilteringDisabled": false,
-    "displayFormat__is_set": false,
-    "isSortingDisabled__is_set": false,
-    "relationshipName": null,
-    "summaryFilterItems": [
-      
-    ],
-    "metadataRelationshipControllingField__is_set": false,
-    "inlineHelpText": null,
-    "relationshipLabel__is_set": false,
-    "fullName__is_set": true,
-    "isConvertLeadDisabled__is_set": false,
-    "mktDataLakeFieldAttributes__is_set": false,
-    "formula__is_set": false,
-    "description__is_set": false,
-    "summaryForeignKey": null,
-    "caseSensitive": false,
-    "isSortingDisabled": false,
-    "formulaTreatBlanksAs": null,
-    "encryptionScheme__is_set": false,
-    "trackTrending": false,
-    "valueSet": {
-      "valueSetName": null,
-      "restricted": false,
-      "valueSettings__is_set": false,
-      "controllingField": null,
-      "valueSetName__is_set": false,
-      "valueSettings": [
-        
-      ],
-      "controllingField__is_set": false,
-      "valueSetDefinition__is_set": true,
-      "restricted__is_set": false,
-      "valueSetDefinition": {
-        "value__is_set": true,
-        "sorted": false,
-        "sorted__is_set": true,
-        "value": [
-          {
-            "_default": true,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "Not Available",
-            "label": "Not Available",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },
-          {
-            "_default": false,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "1 Year",
-            "label": "1 Year",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },
-          {
-            "_default": false,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "2 Years",
-            "label": "2 Years",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },
-          {
-            "_default": false,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "3 Years",
-            "label": "3 Years",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },
-          {
-            "_default": false,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "4 Years",
-            "label": "4 Years",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },
-          {
-            "_default": false,
-            "_default__is_set": true,
-            "color": null,
-            "description__is_set": false,
-            "label__is_set": true,
-            "description": null,
-            "isActive__is_set": false,
-            "fullName": "5 Years",
-            "label": "5 Years",
-            "isActive": false,
-            "color__is_set": false,
-            "fullName__is_set": true
-          },{
-      			"_default": true,
-	            "_default__is_set": true,
-	            "color": null,
-	            "description__is_set": false,
-	            "label__is_set": true,
-	            "description": null,
-	            "isActive__is_set": true,
-		        "fullName": "5-year manufacturer warranty.",
-		        "label": "5-year manufacturer warranty.",
-	            "isActive": true,
-	            "color__is_set": false,
-	            "fullName__is_set": true
-      		}
-        ]
-      }
-    },
-    "businessOwnerUser__is_set": false,
-    "summaryForeignKey__is_set": false,
-    "unique__is_set": false,
-    "description": null,
-    "scale": 0,
-    "precision__is_set": false,
-    "isAIPredictionField": false,
-    "length__is_set": false,
-    "businessStatus__is_set": false,
-    "mktDataLakeFieldAttributes": null,
-    "isFilteringDisabled__is_set": false,
-    "stripMarkup": false,
-    "relationshipOrder": 0,
-    "businessOwnerUser": null,
-    "defaultValue__is_set": false,
-    "deleteConstraint": null,
-    "length": 0,
-    "displayFormat": null,
-    "externalId": false,
-    "fullName": "Product2.Warranty__c",
-    "summarizedField": null,
-    "label": "Warranty",
-    "inlineHelpText__is_set": false,
-    "formula": null,
-    "populateExistingRows": false,
-    "securityClassification__is_set": false,
-    "externalId__is_set": false,
-    "trackHistory": false
-  }
-
-]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<salesforce:update-metadata doc:name="Update metadata" doc:id="f1ddc579-8e9d-4263-8fc8-aaf97402301e" config-ref="Salesforce_Config" type="CustomField"/>
-		<ee:transform doc:name="Transform Message" doc:id="2d1acd81-4d58-4fe9-aa67-6ed5315edb03" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</flow>
 	<sub-flow name="process-product-subflow" doc:id="b1b7d18e-aee2-49d1-9531-203c1a8bcb1b">
 		<try doc:name="Try Process Product">
             
             <!-- Extract Product Data -->
-            <logger level="INFO" doc:name="Logger" doc:id="67fff8f9-8d78-4834-8069-647eb42d703c" message="Payload #[payload]"/>
+            <logger level="DEBUG" doc:name="Logger" doc:id="67fff8f9-8d78-4834-8069-647eb42d703c" message="Payload #[payload]"/>
 			<set-payload value="#[if (payload is Array)&#10;payload[0]&#10;else payload]" doc:name="Set Payload" doc:id="5b4d4239-7b53-4429-b54f-ee156a3eaa62" />
 			<set-variable value="#[payload]" doc:name="Set Product" doc:id="f3f74af9-3b16-46b1-b3f6-ce6c6db84634" variableName="product"/>
 			<set-variable value="#[payload.id]" variableName="currentProductId" doc:name="Set Current Product ID"/>
             <set-variable value="#[payload.brand]" variableName="brandName" doc:name="Set Brand Name"/>
             <set-variable value="#[payload.category]" variableName="collectionName" doc:name="Set Category Name"/>
             
-            <logger level="INFO" doc:name="Log Processing" message="Processing product: #[payload.name] (ID: #[payload.id])"/>
+            <logger level="DEBUG" doc:name="Log Processing" message="Processing product: #[payload.name] (ID: #[payload.id])"/>
             
             <!-- Step 1: Handle Catalog (Brand) -->
 			<choice doc:name="Catalog Exists?">
@@ -441,7 +174,7 @@ Name: vars.brandName,
             </choice>
             
             <!-- Step 2: Handle Category (Collection) -->
-            <logger level="INFO" doc:name="Logger" doc:id="2b21b345-0dcc-42f5-bd82-ec86840f4361" message="collectionName:#[ vars.collectionName] , catalogId:#[ vars.catalogId]"/>
+            <logger level="DEBUG" doc:name="Logger" doc:id="2b21b345-0dcc-42f5-bd82-ec86840f4361" message="collectionName:#[ vars.collectionName] , catalogId:#[ vars.catalogId]"/>
 			<salesforce:query doc:name="Query Existing Category" doc:id="8b962208-a78a-40ce-9470-9a0029e1cd9c" config-ref="Salesforce_Config">
                 <salesforce:salesforce-query><![CDATA[SELECT Id, Name FROM ProductCategory 
 WHERE CatalogId = ':catalogId'
@@ -451,11 +184,10 @@ catalogId: vars.catalogId
 }]]]></salesforce:parameters>
             </salesforce:query>
             
-            <set-variable value="#[payload filter (lower($.Name) == lower(vars.collectionName))]" doc:name="Set CategoryId" doc:id="9ea66a89-beec-4ef7-ae14-1a6f1005055c" variableName="categoryId"/>
-			<logger level="INFO" doc:name="Logger" doc:id="71213f63-5782-45b5-969c-62bb3c351052" message="CategoryId: #[vars.categoryId]"/>
+            <set-variable value="#[(payload filter (lower($.Name) == lower(vars.collectionName)))[0].Id]" doc:name="Set CategoryId" doc:id="9ea66a89-beec-4ef7-ae14-1a6f1005055c" variableName="categoryId"/>
+			<logger level="DEBUG" doc:name="Logger" doc:id="71213f63-5782-45b5-969c-62bb3c351052" message="CategoryId: #[vars.categoryId]"/>
 			<choice doc:name="Category Exists?">
                 <when expression="#[!isEmpty(vars.categoryId)]">
-                    <set-variable value="#[payload[0].Id]" variableName="categoryId" doc:name="Set Existing Category ID"/>
                     <logger level="INFO" doc:name="Log Existing Category" message="Using existing category: #[vars.collectionName] (ID: #[vars.categoryId])"/>
                 </when>
                 <otherwise>
@@ -475,7 +207,31 @@ catalogId: vars.catalogId
             </choice>
             
             <!-- Step 3: Upsert Product -->
-            <ee:transform doc:name="Transform Product Data" doc:id="be288e2b-cdd3-4696-9199-9362330dd5d1">
+            
+            <!-- Upsert Product -->
+            <choice doc:name="Choice" doc:id="0d8e6872-4bf8-4115-ace9-67114850ce58" >
+				<when expression="#[!isEmpty(vars.product.sf_id)]">
+					<ee:transform doc:name="Transform Product Data" doc:id="b78de414-ee90-4a84-ba77-f86d7c7b0226" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+    External_ID__c: vars.product.id as String,
+    Name: vars.product.name ,
+    ProductCode: vars.product.sku ,
+    Description: vars.product.description,
+    IsActive: vars.product.is_active as Boolean default true,
+    Family: vars.product.category,
+    StockKeepingUnit: vars.product.sku ,
+    DisplayURL: vars.product.main_image_url,
+    Id: vars.product.sf_id
+}]]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</when>
+				<otherwise >
+					<ee:transform doc:name="Transform Product Data" doc:id="be288e2b-cdd3-4696-9199-9362330dd5d1">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -488,29 +244,34 @@ output application/java
     IsActive: vars.product.is_active as Boolean default true,
     Family: vars.product.category,
     StockKeepingUnit: vars.product.sku ,
-    Inventory_Level__c: vars.product.stock
+    DisplayURL: vars.product.main_image_url
 }]]]></ee:set-payload>
                 </ee:message>
             </ee:transform>
-            
-            <!-- Upsert Product -->
-            <salesforce:upsert doc:name="Upsert Product" doc:id="74aacffa-1498-4119-8c5c-6ed9d9c4381e" 
+				</otherwise>
+			</choice>
+			<salesforce:upsert doc:name="Upsert Product" doc:id="74aacffa-1498-4119-8c5c-6ed9d9c4381e" 
                               config-ref="Salesforce_Config" 
-                              externalIdFieldName="External_ID__c" 
-                              objectType="Product2">
+                              objectType="Product2" externalIdFieldName="External_ID__c">
             </salesforce:upsert>
             
             <choice doc:name="Choice" doc:id="38f41a35-7101-4ebe-b37b-c3888ad77148" >
 				<when expression='#[payload.successful == false]'>
-					<logger level="INFO" doc:name="Log Error" doc:id="27d86572-0bc3-4530-81e0-e311c4147dc6" message="Error: #[payload.items[0].message] Finding Existing and updating."/>
-					<salesforce:query doc:name="Get Product by SKU" doc:id="68afba04-ee94-4c63-9108-70ecae212f3f" config-ref="Salesforce_Config" >
-						<salesforce:salesforce-query ><![CDATA[select id,name from Product2 where StockKeepingUnit = ':sku']]></salesforce:salesforce-query>
-						<salesforce:parameters ><![CDATA[#[{
+					<logger level="DEBUG" doc:name="Log Error" doc:id="27d86572-0bc3-4530-81e0-e311c4147dc6" message="Error: #[payload.items[0].message] Finding Existing and updating."/>
+					<choice doc:name="Choice" doc:id="df741d01-afc5-4ec5-9d2e-a022dec96e8a">
+						<when expression="#[isEmpty(vars.product.sku)]">
+							<salesforce:query doc:name="Get Product by SKU" doc:id="68afba04-ee94-4c63-9108-70ecae212f3f" config-ref="Salesforce_Config">
+						<salesforce:salesforce-query><![CDATA[select id,name from Product2 where StockKeepingUnit = ':sku']]></salesforce:salesforce-query>
+						<salesforce:parameters><![CDATA[#[{
 	sku: vars.product.sku
 }]]]></salesforce:parameters>
 					</salesforce:query>
-					<logger level="INFO" doc:name="Logger" doc:id="13d8f0be-cf4a-41fb-930d-2249d87cd5d0" message="SF ID: #[payload[0][0]]"/>
-					<set-variable value="#[output application/java&#10;---&#10;payload[0][0]]" doc:name="Set Product SF ID" doc:id="1f1c3fcf-6c50-4131-b219-1d5723904573" variableName="productSfId" />
+							<set-variable value="#[output application/java&#10;---&#10;payload[0][0]]" doc:name="Set Product SF ID" doc:id="1f1c3fcf-6c50-4131-b219-1d5723904573" variableName="productSfId" />
+						</when>
+						<otherwise >
+							<set-variable value="#[output application/java&#10;---&#10;vars.product.sf_id]" doc:name="Set Product SF ID" doc:id="2b7cc25a-3543-44d9-a9fc-81d61193867c" variableName="productSfId" />
+						</otherwise>
+					</choice>
 					<ee:transform doc:name="Transform Product Data" doc:id="c4707aa2-c6fe-4040-9650-61015c197161">
 						<ee:message>
 							<ee:set-payload><![CDATA[%dw 2.0
@@ -524,21 +285,21 @@ output application/java
     IsActive: vars.product.is_active as Boolean default true,
     Family: vars.product.category,
     StockKeepingUnit: vars.product.sku ,
-    Id: vars.productSfId,
-    Inventory_Level__c: vars.product.stock
+    Id: vars.productSfId ,
+    DisplayURL: vars.product.main_image_url
 }]]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<logger level="INFO" doc:name="Logger" doc:id="c198ba66-ccdd-4390-a709-2c6e4f3ab643" message="Retrying product #[payload]"/>
+					<logger level="DEBUG" doc:name="Logger" doc:id="c198ba66-ccdd-4390-a709-2c6e4f3ab643" message="Retrying product #[payload]"/>
 					<salesforce:update doc:name="Update" doc:id="004f4936-2b9a-4a3c-8eda-203af410c203" config-ref="Salesforce_Config" type="Product2"/>
-					<logger level="INFO" doc:name="Logger" doc:id="093c1db8-ffde-4a09-9898-d1622b1eae59" message="Product #[payload.items[0].payload.id] Updated success = #[payload.successful]" />
+					<logger level="DEBUG" doc:name="Logger" doc:id="093c1db8-ffde-4a09-9898-d1622b1eae59" message="Product #[payload.items[0].payload.id] Updated success = #[payload.successful]" />
 				</when>
 				<otherwise >
 					<logger level="INFO" doc:name="Logger" doc:id="51746114-f068-4dcf-b80b-50e76300a8dd" message="Product Upserted"/>
 					<set-variable value="#[payload.items[0].payload.id]" variableName="productSfId" doc:name="Set Product SF ID" />
 				</otherwise>
 			</choice>
-            <logger level="INFO" doc:name="Logger" doc:id="0565b06d-3b46-40bc-8247-3b2dbf7afc46" message="Product Upserted with id: #[vars.productSfId] and full payload #[output application/json --- payload]"/>
+            <logger level="DEBUG" doc:name="Logger" doc:id="0565b06d-3b46-40bc-8247-3b2dbf7afc46" message="Product Upserted with id: #[vars.productSfId] and full payload #[output application/json --- payload]"/>
 			<set-variable value="#[payload[0].created]" variableName="wasCreated" doc:name="Set Created Flag"/>
             
             <!-- Update local database with Salesforce ID if created -->
@@ -575,7 +336,7 @@ output application/java
                     </salesforce:create>
                 </when>
                 <otherwise>
-                    <logger level="INFO" doc:name="Log Existing Link" message="ProductCategoryProduct link already exists"/>
+                    <logger level="DEBUG" doc:name="Log Existing Link" message="ProductCategoryProduct link already exists"/>
                 </otherwise>
             </choice>
             
@@ -583,11 +344,11 @@ output application/java
             <choice doc:name="Created or Updated?">
                 <when expression="#[vars.wasCreated == true]">
                     <set-variable value="#[(vars.successCount as Number default 0) + 1]" variableName="successCount" doc:name="Increment Success Count"/>
-                    <logger level="INFO" doc:name="Log Success" message="Successfully created product: #[payload.name]"/>
+                    <logger level="DEBUG" doc:name="Log Success" message="Successfully created product: #[payload.name]"/>
                 </when>
                 <otherwise>
                     <set-variable value="#[(vars.updateCount as Number default 0) + 1]" variableName="updateCount" doc:name="Increment Update Count"/>
-                    <logger level="INFO" doc:name="Log Update" message="Successfully updated product: #[payload.name]"/>
+                    <logger level="DEBUG" doc:name="Log Update" message="Successfully updated product: #[payload.name]"/>
                 </otherwise>
             </choice>
             

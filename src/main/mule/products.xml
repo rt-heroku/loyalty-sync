@@ -263,15 +263,28 @@ read(vars.parsed,'application/json')]]></ee:set-payload>
 ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
 ProductId , Product.Id, Product.Name, 
 Product.Description,
-Product.Image_URL__c,
-Product.Warranty__c, 
-Product.Item_Short_Description__c,
+Product.DisplayUrl,
 Product.External_ID__c,
-Product.Inventory_Level__c,
 Product.StockKeepingUnit
 from ProductCategoryProduct
 ]]></salesforce:salesforce-query>
 		</salesforce:query>
+			</when>
+			<when expression="#[!isEmpty(attributes.queryParams.prod)]">
+				<salesforce:query-all doc:name="Select Products by ID" doc:id="c4c5330a-86d2-4363-9c5b-6f855987263b" config-ref="Salesforce_Config">
+					<salesforce:salesforce-query ><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
+ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
+ProductId , Product.Id, Product.Name, 
+Product.Description,
+Product.DisplayUrl,
+Product.External_ID__c,
+Product.StockKeepingUnit
+from ProductCategoryProduct 
+WHERE ProductId = ':prod']]></salesforce:salesforce-query>
+					<salesforce:parameters ><![CDATA[#[{
+	prod: attributes.queryParams.prod
+}]]]></salesforce:parameters>
+				</salesforce:query-all>
 			</when>
 			<otherwise >
 				<salesforce:query-all doc:name="Select products by Catalog/Brand" doc:id="f4403bd8-a413-46a0-8ed4-2d7e62413107" config-ref="Salesforce_Config" >
@@ -279,11 +292,8 @@ from ProductCategoryProduct
 ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
 ProductId , Product.Id, Product.Name, 
 Product.Description,
-Product.Image_URL__c,
-Product.Warranty__c, 
-Product.Item_Short_Description__c,
+Product.DisplayUrl,
 Product.External_ID__c,
-Product.Inventory_Level__c,
 Product.StockKeepingUnit
 from ProductCategoryProduct
 where ProductCategoryid in (
@@ -309,6 +319,7 @@ payload map (item) -> {
 	sku: item.Product.StockKeepingUnit default "",
 	brand: item.ProductCategory.Catalog.Name default "",
 	collection: item.ProductCategory.Name default "",
+	category: item.ProductCategory.Name default "",
 	description: item.Product.Description default "",
 	pricing: {
 		everyday_price: "",
@@ -334,11 +345,11 @@ payload map (item) -> {
 	style: "",
 	availability: "In Stock",
 	images: {
-		main_image_url: item.Product.Image_URL__c default "",
+		main_image_url: item.Product.DisplayUrl default "",
 		additional_images: []
 	},
 	delivery_options: [],
-	warranty: item.Product.Warranty__c,
+//	warranty: item.Product.Warranty__c,
 	special_features: [],
 	care_instructions: {
 		warranty_note: ""
@@ -385,18 +396,15 @@ payload ++ vars.pricing]]></ee:set-payload>
 ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
 ProductId , Product.Id, Product.Name, 
 Product.Description,
-Product.Image_URL__c,
-Product.Warranty__c, 
-Product.Item_Short_Description__c,
+Product.DisplayUrl,
 Product.External_ID__c,
-Product.Inventory_Level__c,
 Product.StockKeepingUnit
 from ProductCategoryProduct
 where ProductCategoryid in (
 select id
 from ProductCategory
 where catalogid = ':catalogid'
-)]]></salesforce:salesforce-query>
+) ]]></salesforce:salesforce-query>
 			<salesforce:parameters ><![CDATA[#[output application/java
 ---
 {
@@ -413,6 +421,7 @@ payload map (item) -> {
 	sku: item.Product.StockKeepingUnit default "",
 	brand: item.ProductCategory.Catalog.Name default "",
 	collection: item.ProductCategory.Name default "",
+	category: item.ProductCategory.Name default "",
 	description: item.Product.Description default "",
 	pricing: {
 		everyday_price: "",
@@ -420,7 +429,8 @@ payload map (item) -> {
 		suggested_monthly_payment: "",
 		financing_terms: ""
 	},
-	stock: item.Product.Inventory_Level__c as Number default 0,
+//	stock: item.Product.Inventory_Level__c as Number default 0,
+	stock:0,
 	dimensions: {
 		dimensions: "",
 		details: {
@@ -439,11 +449,12 @@ payload map (item) -> {
 	style: "",
 	availability: "In Stock",
 	images: {
-		main_image_url: item.Product.Image_URL__c default "",
+		main_image_url: item.Product.DisplayUrl default "",
 		additional_images: []
 	},
 	delivery_options: [],
-	warranty: item.Product.Warranty__c,
+//	warranty: item.Product.Warranty__c,
+	warranty: "",
 	special_features: [],
 	care_instructions: {
 		warranty_note: ""
@@ -452,7 +463,8 @@ payload map (item) -> {
 		name: item.ProductCategory.Catalog.Name default "",
 		location: "",
 		url: ""
-	}
+	},
+	sf_id: item.ProductId
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>

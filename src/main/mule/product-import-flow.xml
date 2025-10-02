@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
 	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
 	xmlns:http="http://www.mulesoft.org/schema/mule/http"
 	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
 
 	<!-- HTTP Listener Configuration -->
 
@@ -84,6 +85,23 @@ output application/json
 		<set-variable value="#[payload]" doc:name="Store Original Payload" doc:id="c0b5d41f-adf8-418a-a587-eba7e60f1bfb" variableName="originalPayload"/>
 
 		<!-- Validate required fields -->
+		<logger level="INFO" doc:name="Logger" doc:id="bcc6e1ff-1167-446e-897a-1a3a40e789e9" message="Checking if SKU exists brand: [#vars.originalPayload.brand], prod_type: #[vars.originalPayload.collection], sku: #[vars.originalPayload.sku] - Exists = #[isEmpty(vars.originalPayload.sku)]"/>
+		<choice doc:name="Choice" doc:id="24454258-9af1-4b95-832c-ce5e22d893cd">
+					<when expression="#[isEmpty(vars.originalPayload.sku)]">
+				<db:select doc:name="Select" doc:id="fa5845e2-6725-4436-b59d-24c60f5627d9" config-ref="Database_Config">
+					<db:sql ><![CDATA[select generate_sku(:brand, :prod_type) as sku]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+brand: vars.originalPayload.brand,
+prod_type: vars.originalPayload.collection
+}]]]></db:input-parameters>
+				</db:select>
+				<set-variable value="#[payload[0].sku]" doc:name="Set Variable" doc:id="abb8c334-63f6-4291-892d-be62748cb6da" variableName="sku"/>
+				<logger level="INFO" doc:name="Logger" doc:id="7af4b9cc-1a39-4d19-b39d-0b5433691980" message="Generated SKU: #[output application/json --- payload]"/>
+			</when>
+			<otherwise >
+				<set-variable value="#[vars.originalPayload.sku]" doc:name="Set Variable" doc:id="1d095782-5814-458c-8575-5f75f0fde239" variableName="sku"/>
+			</otherwise>
+				</choice>
 		<ee:transform doc:name="Validate Input" doc:id="c165309d-ac68-4262-a4d9-46283aa2acab">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
@@ -99,7 +117,7 @@ fun validate() =
 	if (isEmpty(productData.product_name)) 
 		validationErrors + "product_name is required"
 	else
-	if (isEmpty(productData.sku)) 
+	if (isEmpty(vars.sku)) 
 		validationErrors + "sku is required"
 	else
 	if (isEmpty(productData.brand)) 
@@ -152,14 +170,14 @@ output application/json
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 
-var productData = payload.data
+var productData = vars.originalPayload
 ---
 {
 	"name": productData.product_name,
 	"price": (productData.pricing.price replace(/\$|,/) with "") as Number default 0,
 	"category": productData.category default "General",
 	"stock": productData.stock as Number default 0, // Default stock
-	"sku": productData.sku,
+	"sku": vars.sku,
 	"brand": productData.brand,
 	"collection": productData.collection,
 	"description": productData.description default "",
@@ -183,7 +201,7 @@ var productData = payload.data
 				<db:select doc:name="Check SKU Exists" doc:id="236d96b1-5523-4dd5-81d2-176965bc15d9" config-ref="Database_Config">
 					<db:sql><![CDATA[SELECT id FROM products WHERE sku = :sku]]></db:sql>
 					<db:input-parameters><![CDATA[#[{
-	sku: payload.sku
+	sku: vars.sku
 }]]]></db:input-parameters>
 				</db:select>
 
@@ -382,7 +400,7 @@ output application/json
 	"message": "Product imported successfully",
 	"product_id": vars.productId,
 	"product_name": vars.originalPayload.product_name,
-	"sku": vars.originalPayload.sku,
+	"sku": vars.sku,
 	"brand": vars.originalPayload.brand
 }]]></ee:set-payload>
 							</ee:message>
