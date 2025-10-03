@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	
+	
+		<flow name="loyalty-set-flow-status" doc:id="963f8638-dc22-4e38-bd49-15eb7e78be14" >
+		<http:listener doc:name="POST /flows" doc:id="eab43d9b-8f74-4060-bc40-4c1c93ba3ae0" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="POST, OPTIONS"/>
+		<ee:transform doc:name="Transform Message" doc:id="acf8422f-5294-41ed-bbf0-664aa5a5dad5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="bebdf904-177a-437c-81ae-7d083f85e746" >
+			<logger level="INFO" doc:name="Logger" doc:id="2d0f3bde-2454-4b22-9e19-3fff62461758" message="Setting status for Flow: #[payload]" />
+			<set-variable value='#[output application/java --- payload.flow as String default ""]' doc:name="Set Flow Name" doc:id="c62155d4-2bac-4785-a0bb-ff2b8ec58972" variableName="flow" />
+			<set-variable value="#[output application/java --- payload.enabled as Boolean default false]" doc:name="Set Enabled" doc:id="046b1788-d9c9-4bd3-b2c8-5f364dd88852" variableName="enabled"/>
+			<logger level="INFO" doc:name="Logger" doc:id="19b57a95-b822-4e94-84db-fce30f2a8ae0" message="Flow: #[vars.flow] -- Enabled: #[vars.enabled]"/>
+			<try doc:name="Try" doc:id="f9cf3a1f-4304-4d8e-8cd3-978540e06607" >
+				<scripting:execute engine="Groovy" doc:name="Get Flow Status1" doc:id="26fa4cbf-1d41-4fa5-adca-96677f4c5f02" >
+					<scripting:code ><![CDATA[
+log.info("Flow Name: " + vars.flow + " - " + vars.enabled);
+
+flow = registry.lookupByName(vars.flow).get();
+if (vars.enabled != flow.isStarted())
+        if (flow.isStarted())
+          flow.stop()
+        else
+          flow.start()
+          
+log.info("Flow: " + vars.flow + " is now Enabled? " + flow.isStarted() );
+
+return flow.isStarted();]]></scripting:code>
+					<scripting:parameters ><![CDATA[#[{
+	
+}]]]></scripting:parameters>
+				</scripting:execute>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="978476cd-842a-49d4-808c-eca62c8801c5" >
+						<logger level="INFO" doc:name="Logger" doc:id="409b8bd1-25ee-4205-9548-decb9e9312ed" message="Flow: #[vars.flow] had an error: #[error.errorMessage]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+			<ee:transform doc:name="Transform Message" doc:id="632a3b2b-33bd-459a-9fe6-800f312c301f" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	flow: vars.flow,
+	enabled: if (payload is Object ) error.errorMessage else payload
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message1" doc:id="b8aa00d7-e6ce-4cb3-8b2f-42f117b77c0c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="get-flows-an-status" doc:id="32f5f928-77b2-4762-bbeb-34fc0027b59d" >
+		<http:listener doc:name="GET /flows" doc:id="1a3cf3cb-1f0e-44e4-b435-bc9cfdc85c77" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="GET"/>
+		<set-payload value='#[[&#10;	"loyalty-update-sf-products",&#10;	"loyalty-on-new-transaction",&#10;	"loyalty-on-modified-member",&#10;	"loyalty-new-member",&#10;	"loyalty-send-image",&#10;	"sync-loyalty-member"&#10;]]' doc:name="Set Flow Names" doc:id="f5673f12-b960-45f1-b994-c328bb3edcfc" />
+		<parallel-foreach doc:name="Parallel For Each" doc:id="01c712bb-f2ab-478e-a8d4-b1b58b98eabb" >
+			<logger level="INFO" doc:name="Logger" doc:id="6f3c7be3-0b98-43c5-89ac-dcaa3acc7cc0" message="Getting status for Flow: #[payload]"/>
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="555f7156-11a2-481f-960e-973c8f43935b" variableName="flow" />
+			<try doc:name="Try" doc:id="627dabd5-1fd8-4d5b-aec1-93a3d37f17c1" >
+				<scripting:execute engine="Groovy" doc:name="Get Flow Status" doc:id="ca971c87-553b-48be-acbd-e1da872c452b">
+				<scripting:code><![CDATA[def getString() {
+String s = vars.flow;
+	return s;
+}
+def fn = getString();
+log.info("Flow Name: " + fn);
+
+flow = registry.lookupByName(fn).get();
+
+log.info("Flow: " + fn + ", Enabled: " + flow.isStarted());
+
+return flow.isStarted();]]></scripting:code>
+				<scripting:parameters><![CDATA[#[{
+	
+}]]]></scripting:parameters>
+			</scripting:execute>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="472234b1-6f81-40dc-91f1-f5a25589ed15" >
+						<logger level="INFO" doc:name="Logger" doc:id="c9b90d67-fcce-4e66-844f-9864d6b9c75b" message="Flow: #[vars.flow] had an error: #[error.errorMessage]"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+			<ee:transform doc:name="Transform Message" doc:id="07c00096-e022-445c-80f2-ff5be6be4bc1">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	flow: vars.flow,
+	enabled: payload
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</parallel-foreach>
+		<ee:transform doc:name="Transform Message" doc:id="6b07f2c2-dcf5-4871-b067-08816350adb7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	
+	
+	</mule>

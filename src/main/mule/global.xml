@@ -36,7 +36,9 @@ http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/
 	</db:config>
  -->
     <db:config name="Database_Config" doc:name="Database Config" doc:id="f99a5068-2c69-4c83-8fd3-f07674b06c58" >
-		<db:generic-connection url="jdbc:postgresql://${db.host}:${db.port}/${db.database}" driverClassName="org.postgresql.Driver" user="${db.user}" password="${db.password}" />
+		<db:generic-connection url="jdbc:postgresql://${db.host}:${db.port}/${db.database}" driverClassName="org.postgresql.Driver" user="${db.user}" password="${db.password}" >
+			<db:pooling-profile />
+		</db:generic-connection>
 	</db:config>
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="adb007e2-d327-442b-8a49-0cf4a0392e32" >
 		<http:request-connection protocol="HTTPS"/>

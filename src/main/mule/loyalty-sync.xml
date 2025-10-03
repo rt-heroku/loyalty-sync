@@ -646,7 +646,7 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</sub-flow>
-	<flow name="loyalty-new-member" doc:id="a8678fc7-3cd1-43e9-9e1f-f33b4d174377" initialState="stopped">
+	<flow name="loyalty-new-member" doc:id="a8678fc7-3cd1-43e9-9e1f-f33b4d174377" initialState="started">
 		<salesforce:new-object-listener doc:name="On New Member" doc:id="ea64a571-b84e-4880-89d0-76af5be81c60" config-ref="Salesforce_Config" objectType="LoyaltyProgramMember">
 			<scheduling-strategy >
 				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
@@ -675,7 +675,7 @@ WHERE Id = ':id']]></salesforce:salesforce-query>
 			</on-error-continue>
 		</error-handler>
 	</flow>
-	<flow name="loyalty-on-modified-member" doc:id="1ff5522c-c552-4d45-8917-577103b5aaf4" initialState="stopped">
+	<flow name="loyalty-on-modified-member" doc:id="1ff5522c-c552-4d45-8917-577103b5aaf4" initialState="started">
 		<salesforce:modified-object-listener doc:name="On Modified Object" doc:id="f0d416c8-384f-44fe-855f-f21b3853346b" config-ref="Salesforce_Config" objectType="LoyaltyProgramMember">
 			<scheduling-strategy >
 				<fixed-frequency frequency="1" timeUnit="MINUTES"/>
@@ -771,7 +771,7 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<flow name="loyalty-on-new-transaction" doc:id="babe8d6a-9b5c-4cfc-af55-46e1144a0661" initialState="stopped">
+	<flow name="loyalty-on-new-transaction" doc:id="babe8d6a-9b5c-4cfc-af55-46e1144a0661" initialState="started">
 		<db:listener table="transactions" doc:name="On Table Row" doc:id="a92b9d3d-f0e9-4f81-9e1a-e5beaf290a77" watermarkColumn="created_at" idColumn="id" config-ref="Database_Config">
 			<scheduling-strategy >
 				<fixed-frequency frequency="1" startDelay="1" timeUnit="SECONDS" />
@@ -848,7 +848,7 @@ payload]]></ee:set-payload>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger" doc:id="51539758-1459-480c-b07a-c10a708e110f" message="Record Sent to salesforce #[payload]"/>
 	</flow>
-	<flow name="sync-loyalty-member" doc:id="41f29916-4982-4245-a6bc-b6e435a4ce17" initialState="stopped">
+	<flow name="sync-loyalty-member" doc:id="41f29916-4982-4245-a6bc-b6e435a4ce17" initialState="started">
 		<db:listener doc:name="On Modified Customer" doc:id="fdc41d49-b357-436f-9f5a-17afc3120af8" config-ref="Database_Config" table="customers" watermarkColumn="updated_at" idColumn="id">
 			<scheduling-strategy >
 				<fixed-frequency />
@@ -885,7 +885,7 @@ output application/java
 			</otherwise>
 		</choice>
 	</flow>
-	<flow name="loyalty-update-sf-products" doc:id="b34a97f0-ab6a-4a5f-88e3-91497e1c7cce" initialState="stopped">
+	<flow name="loyalty-update-sf-products" doc:id="b34a97f0-ab6a-4a5f-88e3-91497e1c7cce" initialState="started">
 		<db:listener table="products" doc:name="On Modified Product" doc:id="f572a5e9-7f80-470c-8e10-5be0610947fa" config-ref="Database_Config" watermarkColumn="updated_at" idColumn="id">
 			<scheduling-strategy >
 				<fixed-frequency frequency="1" startDelay="1" timeUnit="SECONDS" />
@@ -917,126 +917,137 @@ output application/java
 			</otherwise>
 		</choice>
 	</flow>
-	<flow name="loyalty-set-flow-status" doc:id="63aa18a8-5a0b-49de-8a86-df6ccd521952" >
-		<http:listener doc:name="POST /flows" doc:id="de63c0d1-d5f9-4ed9-b99f-f4b1c21b8ca9" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="POST, OPTIONS"/>
-		<ee:transform doc:name="Transform Message" doc:id="afc1c62d-4dcb-4100-882f-fcbbaad51d42" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<parallel-foreach doc:name="Parallel For Each" doc:id="6ee5a528-a997-4fa8-ae53-7c8d9a3c1bd3" >
-			<logger level="INFO" doc:name="Logger" doc:id="77898aff-c162-4f99-99df-19a1778f8657" message="Setting status for Flow: #[payload]" />
-			<set-variable value='#[output application/java --- payload.flow as String default ""]' doc:name="Set Flow Name" doc:id="415bb104-60a2-4ea3-ad43-6589fec3786d" variableName="flow" />
-			<set-variable value="#[output application/java --- payload.enabled as Boolean default false]" doc:name="Set Enabled" doc:id="df9cbba7-bd60-44a8-8a8d-8cf15b1d3949" variableName="enabled"/>
-			<logger level="INFO" doc:name="Logger" doc:id="7aa510f3-8334-4b65-8df5-07324b3d5e7e" message="Flow: #[vars.flow] -- Enabled: #[vars.enabled]"/>
-			<try doc:name="Try" doc:id="d6d85220-66bc-49bd-8121-e46fc2d284b3" >
-				<scripting:execute engine="Groovy" doc:name="Get Flow Status1" doc:id="78ca2487-2f23-4ecb-84b0-99fbf4f7333e" >
-					<scripting:code ><![CDATA[
-log.info("Flow Name: " + vars.flow + " - " + vars.enabled);
-
-flow = registry.lookupByName(vars.flow).get();
-if (vars.enabled != flow.isStarted())
-        if (flow.isStarted())
-          flow.stop()
-        else
-          flow.start()
-          
-log.info("Flow: " + vars.flow + " is now Enabled? " + flow.isStarted() );
-
-return flow.isStarted();]]></scripting:code>
-					<scripting:parameters ><![CDATA[#[{
-	
-}]]]></scripting:parameters>
-				</scripting:execute>
-				<error-handler >
-					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="530d8f99-9d96-4464-b99c-1f7ca5427bd6" >
-						<logger level="INFO" doc:name="Logger" doc:id="5bd32cd4-0091-4497-b3c5-9335e009396b" message="Flow: #[vars.flow] had an error: #[error.errorMessage]" />
-					</on-error-continue>
-				</error-handler>
-			</try>
-			<ee:transform doc:name="Transform Message" doc:id="8823ca18-b37d-41bf-bd2e-f35bcee46296" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+	<flow name="loyalty-send-member-image" doc:id="02ceda6a-1979-4110-b955-0810e1604227" >
+		<http:listener doc:name="/member/send/image" doc:id="c07f52f9-85c3-44f8-89f4-f2db7604c3ef" config-ref="HTTP_Listener_config" path="/members/send/image"/>
+		<set-variable value="#[[] as Array]" doc:name="Initiate Output" doc:id="945a161a-be24-48b5-adfe-fd2583372e49" variableName="response"/>
+		<choice doc:name="Choice" doc:id="04306a4c-cd87-4062-846d-95cdd277f003" >
+			<when expression="#[isEmpty(attributes.queryParams.member)]">
+				<db:select doc:name="Get All Images" doc:id="580ef34f-351e-4090-9a37-93ecac5510f0" config-ref="Database_Config">
+					<db:sql ><![CDATA[select * from customer_images]]></db:sql>
+				</db:select>
+				<foreach doc:name="For Each" doc:id="7a2c888d-f76d-41a6-b699-d0782ad37b29" >
+					<flow-ref doc:name="Send Image" doc:id="9d5968e2-130e-4f2b-b709-ed5f7f75a14b" name="loyalty-send-image"/>
+					<set-variable value="#[vars.response &lt;&lt; payload]" doc:name="Set Response" doc:id="27cfcc5c-37b1-4b8c-9b0a-e5adec91e1c9" variableName="response"/>
+				</foreach>
+			</when>
+			<otherwise>
+				<db:select doc:name="Select" doc:id="8e827b55-4438-4689-97dd-8ad154e94f8d" config-ref="Database_Config">
+					<db:sql ><![CDATA[select * from customer_images
+where customer_id = :id]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	id: attributes.queryParams.member
+}]]]></db:input-parameters>
+				</db:select>
+				<ee:transform doc:name="Transform Message" doc:id="db60ce74-69df-45e6-a5a0-3f159b368734">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
-{
-	flow: vars.flow,
-	enabled: if (payload is Object ) error.errorMessage else payload
-}]]></ee:set-payload>
-				</ee:message>
-			</ee:transform>
-		</parallel-foreach>
-		<ee:transform doc:name="Transform Message1" doc:id="8749cae2-743b-4cd3-aa92-1184e5d0c166" >
+payload[0]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="Send Image" doc:id="c77c60b5-e0fa-4c3a-8ae3-17305afdce18" name="loyalty-send-image"/>
+				<set-variable value="#[vars.response &lt;&lt; payload]" doc:name="Set Response" doc:id="28466275-55f4-4763-9a75-6a9fe138618a" variableName="response" />
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Transform Message" doc:id="a8721b85-0723-4979-a142-bfaed0498725" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-payload.payload]]></ee:set-payload>
+vars.response]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<flow name="get-flows-an-status" doc:id="034ed340-bfc0-4789-9e6f-97478b2fcd65" >
-		<http:listener doc:name="GET /flows" doc:id="52fa0ded-32c5-4135-a4fb-927e2842c32b" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="GET"/>
-		<set-payload value='#[[&#10;	"loyalty-update-sf-products",&#10;	"loyalty-on-new-transaction",&#10;	"loyalty-on-modified-member",&#10;	"loyalty-new-member",&#10;	"sync-loyalty-member"&#10;]]' doc:name="Set Flow Names" doc:id="d3c5336e-fa91-4c62-bfc7-11c202d49f31" />
-		<parallel-foreach doc:name="Parallel For Each" doc:id="44e197e0-764d-4a86-b645-e87350a54e12" >
-			<logger level="INFO" doc:name="Logger" doc:id="378b644e-afe4-408b-9b31-7364025533a4" message="Getting status for Flow: #[payload]"/>
-			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="d255f80c-3b7b-4c68-aff1-6c9cb77d48dc" variableName="flow" />
-			<try doc:name="Try" doc:id="dbda1db0-f4bb-4c30-9427-f55de417edf9" >
-				<scripting:execute engine="Groovy" doc:name="Get Flow Status" doc:id="74f14896-4df6-4521-a1b8-7c222a4e20a6">
-				<scripting:code><![CDATA[def getString() {
-String s = vars.flow;
-	return s;
-}
-def fn = getString();
-log.info("Flow Name: " + fn);
-
-flow = registry.lookupByName(fn).get();
-
-log.info("Flow: " + fn + ", Enabled: " + flow.isStarted());
-
-return flow.isStarted();]]></scripting:code>
-				<scripting:parameters><![CDATA[#[{
-	
-}]]]></scripting:parameters>
-			</scripting:execute>
-				<error-handler >
-					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="98e206a0-c4ba-4cd5-a3e7-68091d86d162" >
-						<logger level="INFO" doc:name="Logger" doc:id="31c9b796-56df-4ecf-a101-39180ce1757e" message="Flow: #[vars.flow] had an error: #[error.errorMessage]"/>
-					</on-error-continue>
-				</error-handler>
-			</try>
-			<ee:transform doc:name="Transform Message" doc:id="97c17c49-f1d2-48b1-a8a7-e34bee0f6968">
-				<ee:message>
-					<ee:set-payload><![CDATA[%dw 2.0
+	<sub-flow name="loyalty-send-image" doc:id="3ae7d382-4887-4d2a-895b-59d9459888dc" >
+		<logger level="INFO" doc:name="Logger" doc:id="9484fc69-3eb9-4ef3-8dc1-cf4ebf6f65d0" message="Trying to upload file [#[payload.filename]]" />
+		<set-variable value="#[{&#10;	filename: payload.filename,&#10;	customer_id: payload.customer_id,&#10;	id: payload.id&#10;}]" doc:name="Set File" doc:id="2e8b9336-288c-48c9-b731-01ed88abaada" variableName="file" />
+		<set-variable value='#[%dw 2.0&#10;    import * from dw::core::Binaries&#10;    output application/octet-stream  with binary// or the specific MIME type of your file (e.g., application/pdf, image/png)&#10;    ---&#10;    fromBase64(payload.image_data replace /^data:image\/[^;]+;base64,/ with "" as String) as Binary]' doc:name="Set File as Binary" doc:id="87c75c3b-d52e-4596-a493-4d07c97d7d3c" variableName="image" />
+		<db:select doc:name="Get SF Member ID" doc:id="92230aa0-42ad-4656-8154-75f11bb926b9" config-ref="Database_Config" target="memberid">
+			<db:sql><![CDATA[select c.sf_id
+from customers c 
+where c.id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	id: payload.customer_id
+}]]]></db:input-parameters>
+		</db:select>
+		<salesforce:query doc:name="Get Account ID" doc:id="65c9a255-eadb-4ac0-a33e-624ad8706a1c" config-ref="Salesforce_Config" target="accountId" targetValue="#[payload[0].Contact.Id]">
+			<salesforce:salesforce-query><![CDATA[SELECT Contact.id
+From LoyaltyProgramMember 
+Where Id=':id']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[{
+	id: vars.memberid[0].sf_id
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="07f84a14-38a6-4f4d-af60-93239579cd1b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
-	flow: vars.flow,
-	enabled: payload
+	accountId: vars.accountId,
+	filename: vars.file.filename,
+	image_data: vars.image
 }]]></ee:set-payload>
-				</ee:message>
-			</ee:transform>
-		</parallel-foreach>
-		<ee:transform doc:name="Transform Message" doc:id="0670ef30-a701-4a1e-b45c-af7628d4241f" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload.payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-	</flow>
-	<sub-flow name="get-transactions" doc:id="7c96e303-b0f9-44c3-afbe-f162a9a5509e" >
-		<ee:transform doc:name="Transform Message" doc:id="9f09a70d-31b4-4ba8-b581-2297b8cfc820" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
+		<ee:transform doc:name="Map File to ContentVersion Object" doc:id="1aadbd89-b7f6-4b6f-a038-cc8f91275740">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+import * from dw::util::Coercions
+output application/java
 ---
-payload]]></ee:set-payload>
+[{
+	PathOnClient: ("avatar-" ++ (payload.filename default "" as String)),
+	VersionData: vars.image as Binary {
+		class: "byte[]"
+	}
+}]]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<salesforce:upsert objectType="ContentVersion" externalIdFieldName="Id" doc:name="Upload File" doc:id="cfe1b43d-6e9e-4790-a509-845852bb8aa3" config-ref="Salesforce_Config" />
+		<salesforce:query doc:name="Get Content Document Id" doc:id="bfc92775-adb4-4a5e-b369-b149efcf049e" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[SELECT ContentDocumentId FROM ContentVersion WHERE Id = ':cvId']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"cvId" : payload.items[0].id
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Map Document Link" doc:id="4275d520-b3c3-4cdc-b3b0-c70e096ba6fa">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	LinkedEntityId: vars.accountId,
+	ContentDocumentId: payload01.ContentDocumentId
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:upsert objectType="ContentDocumentLink" externalIdFieldName="Id" doc:name="Create Content Document Link" doc:id="077677b2-70bb-4ea4-b78c-2596b9d98da6" config-ref="Salesforce_Config" />
+		<ee:transform doc:name="Transform Message" doc:id="71145fe4-9650-4b62-b55c-168073260502" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	message: "File: " ++ (vars.file.filename as String default "") ++ " successfully uploaded to Account ID: " ++ (vars.accountId as String default "" ),
+	success: true,
+	filename: vars.file.filename as String default "",
+	accountId: vars.accountId as String default ""
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="7e7d3e7e-8a0c-447b-a19e-88682fd84567" message="File: #[vars.file.filename] successfully uploaded to Account ID: #[vars.accountId]" />
 	</sub-flow>
+	<flow name="loyalty-on-new-customer-image" doc:id="4ccf60e7-d479-404f-9197-bc1265a55d50" initialState="started">
+		<db:listener doc:name="On Table Row" doc:id="d26c4360-9e25-433d-b278-f76f44abac49" config-ref="Database_Config" table="customer_images" watermarkColumn="created_at" idColumn="id">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</db:listener>
+		<flow-ref doc:name="Send Image" doc:id="7f3f9d37-6764-428f-9250-0b434d03af86" name="loyalty-send-image" />
+	</flow>
 </mule>
