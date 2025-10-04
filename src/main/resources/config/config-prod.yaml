@@ -5,11 +5,10 @@ db:
   password: ""
   database: ""
 
-#Mule AI Chain Configuration
 mac:
-  heroku.inference_key: ""
+  heroku:
+    inference_key: ""
   openai_key: ""
-
 
 #Salesforce configurations
 sfdc:

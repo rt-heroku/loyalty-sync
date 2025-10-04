@@ -74,7 +74,7 @@ payload.payload]]></ee:set-payload>
 	</flow>
 	<flow name="get-flows-an-status" doc:id="32f5f928-77b2-4762-bbeb-34fc0027b59d" >
 		<http:listener doc:name="GET /flows" doc:id="1a3cf3cb-1f0e-44e4-b435-bc9cfdc85c77" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="GET"/>
-		<set-payload value='#[[&#10;	"loyalty-update-sf-products",&#10;	"loyalty-on-new-transaction",&#10;	"loyalty-on-modified-member",&#10;	"loyalty-new-member",&#10;	"loyalty-send-image",&#10;	"sync-loyalty-member"&#10;]]' doc:name="Set Flow Names" doc:id="f5673f12-b960-45f1-b994-c328bb3edcfc" />
+		<set-payload value='#[[&#10;	"loyalty-update-sf-products",&#10;	"loyalty-on-new-transaction",&#10;	"loyalty-on-modified-member",&#10;	"loyalty-new-member",&#10;	"loyalty-send-member-image",&#10;	"update-loyalty-member-sf"&#10;]]' doc:name="Set Flow Names" doc:id="f5673f12-b960-45f1-b994-c328bb3edcfc" />
 		<parallel-foreach doc:name="Parallel For Each" doc:id="01c712bb-f2ab-478e-a8d4-b1b58b98eabb" >
 			<logger level="INFO" doc:name="Logger" doc:id="6f3c7be3-0b98-43c5-89ac-dcaa3acc7cc0" message="Getting status for Flow: #[payload]"/>
 			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="555f7156-11a2-481f-960e-973c8f43935b" variableName="flow" />
