@@ -332,8 +332,7 @@ DO UPDATE SET
     description = EXCLUDED.description,
     image_url = EXCLUDED.image_url,
     is_active = EXCLUDED.is_active,
-    effective_date = EXCLUDED.effective_date,
-    updated_at = CURRENT_TIMESTAMP
+    effective_date = EXCLUDED.effective_date
 WHERE customer_vouchers.updated_at < EXCLUDED.updated_at
 RETURNING id]]></db:sql>
 				<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>

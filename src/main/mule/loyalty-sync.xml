@@ -154,7 +154,7 @@ output application/java
 			</db:query-single>
 			<choice doc:name="Choice" doc:id="851375e9-23e7-4db6-8179-7da334d7c93e" >
 				<when expression="#[vars.memberExists.exists]">
-					<db:update doc:name="Update" doc:id="b1bbd1f3-b1a4-43f6-97aa-0a84e74c8834" >
+					<db:update doc:name="Update" doc:id="b1bbd1f3-b1a4-43f6-97aa-0a84e74c8834" config-ref="Database_Config">
 						<db:sql ><![CDATA[UPDATE customers SET
     sf_id = :sf_id,
     name = :name,
@@ -868,7 +868,7 @@ payload]]></ee:set-payload>
 	<flow name="loyalty-on-new-transaction" doc:id="babe8d6a-9b5c-4cfc-af55-46e1144a0661" initialState="started">
 		<db:listener table="transactions" doc:name="On Table Row" doc:id="a92b9d3d-f0e9-4f81-9e1a-e5beaf290a77" watermarkColumn="created_at" idColumn="id" config-ref="Database_Config">
 			<scheduling-strategy >
-				<fixed-frequency frequency="1" startDelay="1" timeUnit="SECONDS" />
+				<fixed-frequency frequency="10" timeUnit="SECONDS" />
 			</scheduling-strategy>
 		</db:listener>
 		<logger level="INFO" doc:name="Logger" doc:id="cda2e2b9-004a-4881-8343-e9c7238a50dc" message="Sending to Salesforce transaction number: #[payload.id]"/>
@@ -945,7 +945,7 @@ payload]]></ee:set-payload>
 	<flow name="update-loyalty-member-sf" doc:id="41f29916-4982-4245-a6bc-b6e435a4ce17" initialState="started">
 		<db:listener doc:name="On Modified Customer" doc:id="fdc41d49-b357-436f-9f5a-17afc3120af8" config-ref="Database_Config" table="customers" watermarkColumn="updated_at" idColumn="id">
 			<scheduling-strategy >
-				<fixed-frequency />
+				<fixed-frequency frequency="10000"/>
 			</scheduling-strategy>
 		</db:listener>
 		<logger level="INFO" doc:name="Logger" doc:id="9dc47494-19e1-408c-9e8b-4c7e26d4a77e" message="Sending customer #[payload.id] -- #[payload.first_name ++ payload.last_name]"/>
@@ -982,7 +982,7 @@ output application/java
 	<flow name="loyalty-update-sf-products" doc:id="b34a97f0-ab6a-4a5f-88e3-91497e1c7cce" initialState="started">
 		<db:listener table="products" doc:name="On Modified Product" doc:id="f572a5e9-7f80-470c-8e10-5be0610947fa" config-ref="Database_Config" watermarkColumn="updated_at" idColumn="id">
 			<scheduling-strategy >
-				<fixed-frequency frequency="1" startDelay="1" timeUnit="SECONDS" />
+				<fixed-frequency frequency="10" timeUnit="SECONDS" />
 			</scheduling-strategy>
 		</db:listener>
 		<choice doc:name="Choice" doc:id="c9478a13-d5cd-43a0-82e8-34b36864fe86" >
@@ -1143,5 +1143,52 @@ output application/java
 			</scheduling-strategy>
 		</db:listener>
 		<flow-ref doc:name="Send Image" doc:id="7f3f9d37-6764-428f-9250-0b434d03af86" name="loyalty-send-image" />
+	</flow>
+	<flow name="send-vouchers-to-salesforce" doc:id="b4f4bf3c-f111-4401-a053-5c7cee244bce" >
+		<http:listener doc:name="POST /members/vouchers/send" doc:id="6c5d831d-ca84-4f30-82da-6a48f3091f27" config-ref="HTTP_Listener_config" path="/members/vouchers/send"/>
+		<db:query-single doc:name="Query single" doc:id="c4ff253c-e58c-4813-bb12-acd3fdff8334" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from 
+customer_vouchers
+where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:attributes.queryParams.id
+}]]]></db:input-parameters>
+		</db:query-single>
+		<logger level="INFO" doc:name="Logger" doc:id="f2649a33-f82e-4208-ad62-a2fcbb8c7273" message="Entering on modified voucher"/>
+		<choice doc:name="Choice" doc:id="928179c0-fc9c-425b-b269-aa4618f70de0" >
+			<when expression='#[payload.status == "Redeemed" and !isEmpty(payload.use_date)]'>
+				<logger level="INFO" doc:name="Logger" doc:id="0f36627c-c8d5-40a3-bbfd-37b72d04be06" message="Updating REDEEMED voucher id #[payload.sf_id] - #[payload.voucher_code], Used? #[!isEmpty(payload.use_date)]"/>
+				<ee:transform doc:name="Transform Message" doc:id="59ec42a5-ba4a-429c-adbc-24988d1e998c">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Id: payload.sf_id,
+	Status: payload.status,
+	UseDate: payload.use_date,
+	RedeemedValue: payload.redeemed_value
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<salesforce:update type="Voucher" doc:name="Update" doc:id="c553831d-24f1-490c-a75f-be5005d1fcce" config-ref="Salesforce_Config" />
+				<ee:transform doc:name="Transform Message" doc:id="db50c60a-f556-4bb9-b4ce-f9fb81ec3fc2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	successful: payload.items[0].successful,
+	message: payload.items[0].message,
+	sfid: payload.items[0].id
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="e1f40a61-d258-43eb-b5f4-eb6f5ca554c8" message="Voucher succesfully updated #[payload]"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="dae24ea5-9fe3-4094-b3bf-cb15ba269db8" message="Voucher Code: #[payload.voucher_code] Status: #[payload.status] not processed! and Used? #[!isEmpty(payload.use_date)]"/>
+			</otherwise>
+		</choice>
 	</flow>
 </mule>
