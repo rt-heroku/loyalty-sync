@@ -229,12 +229,12 @@ output application/json
 							<db:sql><![CDATA[INSERT INTO products (
     "name", price, category, stock, sku, brand, collection, description, 
     dimensions, weight, main_image_url, is_active, featured, sort_order, 
-    warranty_info, care_instructions, color, product_type, sf_id
+    warranty_info, care_instructions, color, product_type, sf_id, status
 )
 VALUES (
     :name, :price, :category, :stock, :sku, :brand, :collection, :description,
     :dimensions, :weight, :main_image_url, :is_active, :featured, :sort_order,
-    :warranty, :care, :color, :product_type, :sf_id
+    :warranty, :care, :color, :product_type, :sf_id, 'Sent'
 )
 ON CONFLICT (sku) DO UPDATE SET
     "name" = EXCLUDED."name",
@@ -254,7 +254,8 @@ ON CONFLICT (sku) DO UPDATE SET
     care_instructions = EXCLUDED.care_instructions,
     color = EXCLUDED.color,
     product_type = EXCLUDED.product_type,
-    sf_id = EXCLUDED.sf_id
+    sf_id = EXCLUDED.sf_id,
+    status = 'Sent'
 RETURNING id;]]></db:sql>
 							<db:input-parameters ><![CDATA[#[vars.product]]]></db:input-parameters>
 						</db:insert>

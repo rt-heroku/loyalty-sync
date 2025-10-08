@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ms-inference="http://www.mulesoft.org/schema/mule/ms-inference"
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ms-inference="http://www.mulesoft.org/schema/mule/ms-inference"
 	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
-	xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
-http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/mule/ms-inference/current/mule-ms-inference.xsd">
+http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/mule/ms-inference/current/mule-ms-inference.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
 	<configuration-properties
 		doc:name="configuration-properties-env"
 		doc:id="e9550823-a719-4302-b686-4def2f633bb7"
@@ -58,5 +59,6 @@ http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/
 	<ms-inference:text-generation-config name="Heroku_Inference" doc:name="MuleSoft Inference Text generation config" doc:id="ad7856d0-0ea8-49ad-8c0e-da75e1b727ea" >
 		<ms-inference:heroku-connection apiKey="${mac.heroku.inference_key}" maxTokens="8096" herokuInferenceModel="claude-4-sonnet"/>
 	</ms-inference:text-generation-config>
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="b59e4dc6-a3f7-465c-b553-1dc83cabd1c6" />
 
 </mule>

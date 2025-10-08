@@ -306,7 +306,7 @@ output application/java
             
             <!-- Step 4: Create ProductCategoryProduct Link -->
             <db:update doc:name="Update SF ID in DB" doc:id="d7f7069b-d284-4ca1-be54-39c16f7e89c6" config-ref="Database_Config">
-                        <db:sql><![CDATA[UPDATE products SET sf_id = :sfId WHERE id = :productId]]></db:sql>
+                        <db:sql><![CDATA[UPDATE products SET sf_id = :sfId, status = 'Sent' WHERE id = :productId]]></db:sql>
                         <db:input-parameters><![CDATA[#[{
 	sfId: vars.productSfId,
 	productId: vars.productId
