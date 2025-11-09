@@ -12,10 +12,6 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
 http://www.mulesoft.org/schema/mule/ms-inference http://www.mulesoft.org/schema/mule/ms-inference/current/mule-ms-inference.xsd
 http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
-	<configuration-properties
-		doc:name="configuration-properties-env"
-		doc:id="e9550823-a719-4302-b686-4def2f633bb7"
-		file="config/config-${env}.yaml" />
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="c4891ef2-37a4-4f52-a75a-a43665137ca1">
 		<http:listener-connection host="${http.host}" port="${http.port}" />
 		<http:listener-interceptors >
@@ -27,7 +23,10 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		</http:listener-interceptors>
 	</http:listener-config>
 	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="6c36ba80-5757-4919-8481-b4106a947e60" >
-		<salesforce:basic-connection username="${sfdc.account}" password="${sfdc.password}" securityToken="${sfdc.token}" />
+		<salesforce:oauth-client-credentials-connection >
+			<salesforce:oauth-client-credentials clientId="${sfdc.consumer_key}" clientSecret="${sfdc.consumer_secret}" tokenUrl="https://${sfdc.domain}/services/oauth2/token" />
+			<salesforce:oauth-store-config objectStore="Object_store" />
+		</salesforce:oauth-client-credentials-connection>
 	</salesforce:sfdc-config>
 <!--     <db:config name="Database_Config" doc:name="Database Config - mathis DB" doc:id="200c33d5-0bb9-4cfc-9e8c-8200c6a99947" >
 		<db:generic-connection url="jdbc:postgresql://cer3tutrbi7n1t.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/dfhm18cvu5q7bu" driverClassName="org.postgresql.Driver" user="u10v3fl34siq7l" password="p9a8a339d36efa07434aace68b0794582c082820ea53044d0041c1ad646c73665" />
@@ -38,10 +37,14 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
  -->
     <db:config name="Database_Config" doc:name="Database Config" doc:id="f99a5068-2c69-4c83-8fd3-f07674b06c58" >
 		<db:generic-connection url="jdbc:postgresql://${db.host}:${db.port}/${db.database}" driverClassName="org.postgresql.Driver" user="${db.user}" password="${db.password}" >
-			<db:pooling-profile />
 		</db:generic-connection>
 	</db:config>
-	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="adb007e2-d327-442b-8a49-0cf4a0392e32" >
+<!--     <db:config name="Database_Config_full" doc:name="Database Config" doc:id="a04a942a-fb24-49c5-853a-6287a4c655ae" >
+		<db:generic-connection url="jdbc:postgresql://${db.host}:${db.port}/${db.database}" driverClassName="org.postgresql.Driver" user="${db.user}" password="${db.password}" >
+			<db:pooling-profile maxPoolSize="${db.maxPoolSize}" minPoolSize="${db.minPoolSize}" maxWait="${db.maxWait}" acquireIncrement="${db.accIncrement}" preparedStatementCacheSize="${db.psCacheSize}" maxIdleTime="${db.maxIdleTime}" maxStatements="${db.maxStatements}"/>
+		</db:generic-connection>
+	</db:config>
+ -->	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="adb007e2-d327-442b-8a49-0cf4a0392e32" >
 		<http:request-connection protocol="HTTPS"/>
 		<http:default-headers >
 			<http:default-header key="User-Agent" value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36" />
@@ -51,14 +54,23 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 	<file:config name="File_Config" doc:name="File Config" doc:id="31674520-7967-421f-ac56-c4ce05fec5f3" >
 		<file:connection workingDir="/Users/rodrigo.torres/mulesoft-work/mac-chain/files" />
 	</file:config>
-	<configuration-properties doc:name="Configuration properties" doc:id="0eb8e850-8f74-4eeb-96d8-f87023b3e89f" file="config/config.yaml" />
+	<configuration-properties doc:name="Configuration properties" doc:id="0eb8e850-8f74-4eeb-96d8-f87023b3e89f" file="config/config-base.yaml" />
 	<global-property doc:name="Global Property" doc:id="63c01cfd-c853-449d-9956-3a49d6ae08e3" name="env" value="prod" />
+	<configuration-properties
+		doc:name="configuration-properties-env"
+		doc:id="e3a78ddd-3d50-40ac-905a-93975ae600a2"
+		file="config/config-${env}.yaml" />
 	<ms-inference:text-generation-config name="MuleSoft_Inference_Text_generation_config" doc:name="MuleSoft Inference Text generation config" doc:id="dce4c000-948c-41ff-840b-495a9fa6684e" >
 		<ms-inference:openai-connection openAIModelName="gpt-4o" apiKey="${mac.openai_key}" maxTokens="16384" />
 	</ms-inference:text-generation-config>
 	<ms-inference:text-generation-config name="Heroku_Inference" doc:name="MuleSoft Inference Text generation config" doc:id="ad7856d0-0ea8-49ad-8c0e-da75e1b727ea" >
-		<ms-inference:heroku-connection apiKey="${mac.heroku.inference_key}" maxTokens="8096" herokuInferenceModel="claude-4-sonnet"/>
+		<ms-inference:heroku-connection apiKey="${mac.heroku.inference_key}" maxTokens="8192" herokuInferenceModel="claude-3-5-haiku"/>
 	</ms-inference:text-generation-config>
-	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="b59e4dc6-a3f7-465c-b553-1dc83cabd1c6" />
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="b59e4dc6-a3f7-465c-b553-1dc83cabd1c6" >
+		<os:connection />
+	</os:config>
+	<ms-inference:text-generation-config name="MuleSoft_Inference_Text_generation_local" doc:name="MuleSoft Inference Text generation config" doc:id="c97c4cf7-c659-48a3-99a4-b14b563ae03f" >
+		<ms-inference:ollama-connection ollamaModelName="gpt-oss:20b" ollamaUrl="http://192.168.37.65:11434/api" maxTokens="999999999" apiKey="x" />
+	</ms-inference:text-generation-config>
 
 </mule>

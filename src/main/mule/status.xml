@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
 	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd 
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
 	
 	
 		<flow name="loyalty-set-flow-status" doc:id="963f8638-dc22-4e38-bd49-15eb7e78be14" >
@@ -72,6 +73,77 @@ payload.payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
+	<flow name="statusFlow" doc:id="71ce0c26-9b91-4ccd-9d35-a44447287044" >
+		<http:listener doc:name="Listener" doc:id="04ab9d8c-0816-46e9-b5c9-0c66ccf6e121" config-ref="HTTP_Listener_config" path="/system/info" allowedMethods="GET"/>
+		<ee:transform doc:name="Transform Message" doc:id="b4e1da8f-d218-434b-978e-9a4691f4b11c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import props from dw::Runtime
+output application/json
+---
+{
+  "java": {
+    "vendor": p('java.vendor'),
+    "runtime_name": p('java.runtime.name'),
+    "version": p('java.version')
+  },
+  "application": {
+    "aws_region": p('application.aws.region')
+  },
+  "http": {
+    "host": p('http.host'),
+    "port": p('http.port'),
+    "ports": p('http.port'),
+    "path": p('http.path')
+  },
+  "mac": {
+    "heroku": {
+      "inference_key": if (!isEmpty(p('mac.heroku.inference_key'))) "<Defined>" else "<Empty>"
+    },
+    "send_batches_size": p('mac.send_batches_size'),
+    "openai_key": if (!isEmpty(p('mac.openai_key'))) "<Defined>" else "<Empty>"
+  },
+  "mule": {
+    "home": p('mule.home')
+  },
+  "cloudhub": {
+    "organization_id": p('csorganization.id'),
+    "environment_id": p('environment.id'),
+    "environment_type": p('environment.type'),
+    "worker_id": p('worker.id')
+  },
+  "domain": {
+    "domain": p('domain'),
+    "full_domain": p('fullDomain')
+  },
+  "db": {
+    "host": p('db.host'),
+    "port": p('db.port'),
+    "user": p('db.user'),
+    "password": if (!isEmpty(p('db.password'))) "<Defined>" else "<Empty>",
+    "database": p('db.database'),
+    "max_pool_size": p('db.maxPoolSize'),
+    "min_pool_size": p('db.minPoolSize'),
+    "acc_increment": p('db.accIncrement'),
+    "ps_cache_size": p('db.psCacheSize'),
+    "max_wait": p('db.maxWait'),
+    "max_idle_time": p('db.maxIdleTime'),
+    "max_statements": p('db.maxStatements'),
+    "frequency": p('db.frecuency')
+  },
+  "sfdc": {
+    "url": p('sfdc.url'),
+    "token": if (!isEmpty(p('sfdc.token'))) "<Defined>" else "<Empty>",
+    "password": if (!isEmpty(p('sfdc.password'))) "<Defined>" else "<Empty>",
+    "account": p('sfdc.account'),
+    "frequency": p('sfdc.frecuency')
+  },
+  	"envVars" : dw::System::envVars(),
+	"props" : props()  
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
 	<flow name="get-flows-an-status" doc:id="32f5f928-77b2-4762-bbeb-34fc0027b59d" >
 		<http:listener doc:name="GET /flows" doc:id="1a3cf3cb-1f0e-44e4-b435-bc9cfdc85c77" config-ref="HTTP_Listener_config" path="/flows" allowedMethods="GET"/>
 		<set-payload value='#[[&#10;	"loyalty-update-sf-products",&#10;	"loyalty-on-new-transaction",&#10;	"loyalty-on-modified-member",&#10;	"loyalty-new-member",&#10;	"loyalty-send-member-image",&#10;	"update-loyalty-member-sf"&#10;]]' doc:name="Set Flow Names" doc:id="f5673f12-b960-45f1-b994-c328bb3edcfc" />
@@ -120,6 +192,49 @@ output application/java
 output application/json
 ---
 payload.payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="get-netinfo" doc:id="21977c21-3e86-4306-b899-f0d0992fe0e1" >
+		<http:listener doc:name="Listener" doc:id="4bffa841-8204-42db-a7df-b44715177d53" config-ref="HTTP_Listener_config" path="/netinfo" />
+		<set-variable value="#[attributes]" doc:name="Set Variable" doc:id="c4fbf5b3-fef4-40c5-b9b6-6d91b083a04c" variableName="attributes" />
+		<ee:transform doc:name="Transform Message" doc:id="7697c4c1-7dde-4c82-811a-7e175f80a3c6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="GET" doc:name="Get Public IP" doc:id="f3599b54-fa2d-4ec8-9c6c-21d91c7ff83d" config-ref="HTTP_Request_configuration" url="https://api.ipify.org?format=json" target="publicip" />
+		<java:invoke-static method="getHostName(java.lang.String)" doc:name="Get Public Hostname" doc:id="7c3164af-caee-403f-9afb-198ab6475559" class="com.mulesoft.DnsNameResolver" target="hostname" >
+			<java:args ><![CDATA[#[{
+	ipAddress: vars.publicip.ip
+}]]]></java:args>
+		</java:invoke-static>
+		<java:invoke-static method="getPublicHostname()" doc:name="Invoke static" doc:id="be701c60-9a07-4cfc-8f0b-e59fa708816e" class="com.mulesoft.DnsNameResolver" />
+		<ee:transform doc:name="Transform Message1" doc:id="80d89a96-4e4e-4ac6-9d5d-6d7866171567" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import dw::System
+import * from dw::Runtime
+import java!org::mule::runtime::core::api::util::NetworkUtils
+---
+{
+	"domain": p('api.domain'),
+	"host": p('api.host'),
+	"api": p('api'),
+	"attributes": vars.attributes,
+	"hostname": vars.hostname,
+	"localhost": payload as String default "",
+	"dw_localhost": (NetworkUtils::getLocalHost()).hostName,
+	"envVars" : dw::System::envVars(),
+	"props" : props(),
+	"publicip": vars.publicip.ip
+}
+]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>

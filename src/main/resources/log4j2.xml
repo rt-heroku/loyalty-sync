@@ -27,6 +27,7 @@
         <AsyncLogger name="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" level="INFO"/>
         
         <AsyncLogger name="org.mule.extension.webcrawler.internal.crawler" level="DEBUG"/>
+        <AsyncLogger name="com.mulesoft.connectors.inference.internal.service" level="DEBUG"/>
         
 <!--          <AsyncLogger name="org.mule.extension.db" level="DEBUG"/>
 		<AsyncLogger name="org.mule.db.commons" level="DEBUG"/>

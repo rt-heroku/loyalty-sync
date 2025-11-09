@@ -42,19 +42,18 @@ output application/json
 		</ee:transform>
 	</flow>
 	<flow name="products-generate" doc:id="98d6c3cf-236c-4aff-9fa8-0aceed68cd2a" >
-		<http:listener doc:name="Listener" doc:id="57b5104d-1cd8-4f6c-abd3-02766ccf7754" path="/products/generate" config-ref="HTTP_Listener_config"/>
+		<http:listener doc:name="GET /products/generate" doc:id="57b5104d-1cd8-4f6c-abd3-02766ccf7754" path="/products/generate" config-ref="HTTP_Listener_config"/>
 		<db:select doc:name="Select" doc:id="f6df25d4-5690-4a75-aacd-61a21333bfd5" target="batch_num" config-ref="Database_Config">
 			<db:sql ><![CDATA[select get_next_batch_number()]]></db:sql>
 		</db:select>
 		<set-variable value='#[attributes.queryParams.n as Number {format : "#" } default 1]' doc:name="Set Variable" doc:id="1eb178c0-a5c2-4724-9654-8e5bb833074f" variableName="numberOfProds"/>
+		<set-variable value="#[%dw 2.0&#10;import p from Mule&#10;---&#10;p('use_openai') as Boolean default true]" doc:name="Use OpenAI?" doc:id="26a6610b-3bb6-444d-bf44-d547517023f4" variableName="openai" />
 		<choice doc:name="Choice" doc:id="551a6b41-4ca4-487e-b3a1-3b21d07a33e7" >
-			<when expression="!isEmpty(p('mac.openai_key'))">
+			<when expression="#[vars.openai]">
 				<set-variable value="#[[vars.numberOfProds]]" doc:name="Set Variable" doc:id="9c022834-b634-4724-ae93-c89fe15dc158" variableName="nums"/>
-				<set-variable value="#[true as Boolean]" doc:name="Set Variable" doc:id="26a6610b-3bb6-444d-bf44-d547517023f4" variableName="openai"/>
 			</when>
 			<otherwise >
 				<set-variable value="#[var x = p('mac.send_batches_size') as Number {format: &quot;#&quot;} default 2&#10;fun divideByX(n) =&#10;    if (n &lt;= 0) [] &#10;    else if (n &lt; x) [n]&#10;    else [x] ++ divideByX(n - x)&#10;&#10;---&#10;divideByX(vars.numberOfProds)]" doc:name="Set Variable" doc:id="5d367807-ec01-4c35-958a-522c7a485caa" variableName="nums" />
-				<set-variable value="#[false as Boolean]" doc:name="Set Variable" doc:id="89a07bf2-089c-4406-9b0b-5db373f4aba5" variableName="openai"/>
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="Log Model" doc:id="1c27c764-fa69-4ef4-959e-e839966a5541" message="\nUsing OpoenAI = #[vars.openai]" />

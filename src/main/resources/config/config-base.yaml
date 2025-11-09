@@ -1,10 +1,10 @@
-sfdc:
-  consumer_key: ""
-  consumer_secret: ""
-  domain: ""
+http:
+  host: "0.0.0.0"
+  port: "8081"
+  path: "/"
 
 db:
-  maxPoolsize: "10"
+  maxPoolSize: "10"
   minPoolSize: "2"
   accIncrement: "1"
   psCacheSize: "5"
@@ -13,7 +13,9 @@ db:
   maxStatements: "0"
   frecuency: "10"
 
+sfdc:
+  frecuency: "10"
+
 mac:
-  heroku:
-    inference_key: ""
-  openai_key: ""
+  send_batches_size: "2"
+  use_openai: "true"

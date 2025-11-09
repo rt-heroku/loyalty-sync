@@ -358,7 +358,7 @@ where sf_id = :sf_id]]></db:sql>
 		</foreach>
 		<logger level="INFO" doc:name="Logger" doc:id="4498ee76-9bf3-47be-812e-9ae4a5440824" message="#[vars.response]" />
 	</sub-flow>
-	<flow name="loyalty-get-member-vouchers" doc:id="c300c99a-1dab-4477-abbf-8e3fbb6fb621">
+	<flow name="loyalty-get-member-vouchers" doc:id="c300c99a-1dab-4477-abbf-8e3fbb6fb621" initialState="started">
 		<http:listener doc:name="Listener" doc:id="399fb43a-9fce-4f26-964c-bf73e2b5b967" config-ref="HTTP_Listener_config" path="/members/vouchers" allowedMethods="GET"/>
 		<set-variable value="#[attributes.queryParams.member as Number]" doc:name="Set member" doc:id="fe051d97-457c-49aa-b284-b85f766c08e8" variableName="member"/>
 		<flow-ref doc:name="Get Member Vouchers" doc:id="ab1ee291-6e50-4c5c-968e-63b106ea36ca" name="get-member-vouchers"/>

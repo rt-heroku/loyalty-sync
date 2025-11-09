@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-	xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:file="http://www.mulesoft.org/schema/mule/file"
-	xmlns:ms-vectors="http://www.mulesoft.org/schema/mule/ms-vectors"
-	xmlns:ms-webcrawler="http://www.mulesoft.org/schema/mule/ms-webcrawler" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ms-vectors="http://www.mulesoft.org/schema/mule/ms-vectors" xmlns:ms-webcrawler="http://www.mulesoft.org/schema/mule/ms-webcrawler" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
@@ -12,7 +12,10 @@ http://www.mulesoft.org/schema/mule/ms-webcrawler http://www.mulesoft.org/schema
 http://www.mulesoft.org/schema/mule/ms-vectors http://www.mulesoft.org/schema/mule/ms-vectors/current/mule-ms-vectors.xsd
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
 http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
-http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="62fa3278-0040-4ee1-b54f-3dcc23ea6f72" maxEntries="10000" entryTtl="36000" config-ref="ObjectStore_Config" />
 	<flow name="loyalty-sync-members" doc:id="0c9bad27-2032-4cdd-97bc-e3523d95409a">
 		<http:listener doc:name="Listener" doc:id="7456c129-1973-4124-8b96-79cfe65f2c74" path="/sync/members" config-ref="HTTP_Listener_config"/>
 		<flow-ref doc:name="Flow Reference" doc:id="31a30882-368b-4c99-b45d-6cb790c97081" name="sync-member" />
@@ -36,9 +39,9 @@ Contact.Account.PersonBirthdate, Contact.Account.FirstName, Contact.Account.Last
 Contact.Account.PersonEmail, Contact.Account.PersonMailingAddress, Contact.Account.Website
 FROM LoyaltyProgramMember]]></salesforce:salesforce-query>
 		</salesforce:query-all>
-		<parallel-foreach doc:name="Parallel For Each" doc:id="4071dbbb-02a7-4371-91e5-a15c7440f0f0" collection="#[payload]">
+		<parallel-foreach doc:name="Parallel For Each" doc:id="ab04d3ed-9d1a-4ffb-b8cf-a92d96fee59f" >
 			<set-variable value="#[payload]" doc:name="Set Member" doc:id="837cd6dd-877b-4864-ba31-219ee82e7995" variableName="member" />
-			<flow-ref doc:name="Get Member Points and Tier" doc:id="7147f7d7-2c0b-40ee-b773-d7ff00d8dd60" name="get-member-points-tier"/>
+			<flow-ref doc:name="Get Member Points and Tier" doc:id="7147f7d7-2c0b-40ee-b773-d7ff00d8dd60" name="get-member-points-tier" />
 		</parallel-foreach>
 		<ee:transform doc:name="Transform Message" doc:id="fff2ca63-fb83-4a5a-bb9a-8ec09e74139c" >
 			<ee:message >
@@ -67,21 +70,225 @@ WHERE ProgramId = ':program'
 	"program" : attributes.queryParams.program
 }]]]></salesforce:parameters>
 		</salesforce:query-all>
+		<set-variable value="#[payload]" doc:name="Set Members" doc:id="2cf4dc79-12ab-42d6-a4e1-fed2fb4b5fe7" variableName="members" />
+		<choice doc:name="Choice" doc:id="60fcf629-7e56-42c5-bfa6-491611705519" >
+			<when expression="#[sizeOf(vars.members) &gt; 0]">
+				<set-variable value="#[%dw 2.0 output application/java --- (vars.members map &quot;'$($.Id)'&quot; joinBy &quot;,&quot;) as String default &quot;&quot;]" doc:name="Set Variable" doc:id="bff4e959-3b56-452e-a5f6-63f14bb03f05" variableName="membersIN" />
+				<salesforce:query-all doc:name="Query Points by Member Id" doc:id="e0136ee7-7fc6-45d5-8768-04346abf69b9" config-ref="Salesforce_Config" target="points" >
+					<salesforce:salesforce-query ><![CDATA[SELECT LoyaltyMemberId, sum(PointsBalance) PointsBalance, sum(EscrowPointsBalance) EscrowPointsBalance , sum(ExpirablePoints) ExpirablePoints, 
+sum(TotalPointsAccrued) TotalPointsAccrued, sum(TotalPointsExpired) TotalPointsExpired, sum(TotalPointsRedeemed) TotalPointsRedeemed
+FROM LoyaltyMemberCurrency
+WHERE LoyaltyMemberId IN ( :membersIN)
+group by LoyaltyMemberId 
+]]></salesforce:salesforce-query>
+					<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"membersIN" : vars.membersIN
+}]]]></salesforce:parameters>
+				</salesforce:query-all>
+				<salesforce:query-all doc:name="Query Tier by Member Id" doc:id="a82e977e-159b-45d1-b00b-3d4fc5e85550" config-ref="Salesforce_Config" target="tiers" >
+					<salesforce:salesforce-query ><![CDATA[SELECT LoyaltyMemberId, id, Name
+From LoyaltyMemberTier 
+Where LoyaltyMemberId  IN ( :membersIN)]]></salesforce:salesforce-query>
+					<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"membersIN" : vars.membersIN
+}]]]></salesforce:parameters>
+				</salesforce:query-all>
+				<salesforce:query-all doc:name="Get all Spent and Items" doc:id="7162a613-c1df-4d3d-b72c-f090862a49f3" config-ref="Salesforce_Config" target="spent" >
+					<salesforce:salesforce-query ><![CDATA[select MemberId,
+sum(TransactionAmount) TotalSpent,
+sum(Quantity) TotalItems,
+count(Id) TotalVisits,
+max(ActivityDate) LastVisit
+from transactionjournal
+where JournalType.Name = 'Accrual'
+And JournalSubType.Name = 'Purchase'
+And Status = 'Processed'
+And MemberId  IN ( :membersIN)
+Group by MemberId]]></salesforce:salesforce-query>
+					<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"membersIN" : vars.membersIN
+}]]]></salesforce:parameters>
+				</salesforce:query-all>
+				<ee:transform doc:name="Transform Message" doc:id="961039c8-0306-4734-8480-b806f6856824" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+do {
+    var memberIds = vars.members map $.Id
+    var tiersMap = vars.tiers groupBy $.LoyaltyMemberId
+    var pointsMap = vars.points groupBy $.LoyaltyMemberId
+    var spentMap = vars.spent groupBy $.MemberId
+    
+    ---
+    vars.members map (member) -> do {
+        var tierData = tiersMap[member.Id as String][0] default {}
+        var pointsData = pointsMap[member.Id as String][0] default {}
+        var spentData = spentMap[member.Id as String][0] default {}
+        ---
+        {
+            sf_id: member.Id,
+            loyalty_number: member.MembershipNumber,
+            first_name: member.Contact.FirstName,
+            last_name: member.Contact.LastName,
+            name: member.Contact.Name,
+            email: member.Contact.Email,
+            phone: member.Contact.Phone,
+            points: pointsData.points as Number default 0,
+            member_status: member.MemberStatus,
+            member_type: member.MemberType,
+            enrollment_date: member.EnrollmentDate,
+            customer_tier: tierData.Name default "Bronze",
+            total_spent: spentData.TotalSpent as Number default 0,
+            visit_count: spentData.TotalVisits as Number default 0,
+            last_visit: if (!isEmpty(spentData.LastVisit)) 
+                (spentData.LastVisit as DateTime) as String  {format: "yyyy-MM-dd HH:mm:ss"} 
+                else null,
+            notes: "Synced from Salesforce",
+            preferred_contact: "email",
+            date_of_birth: member.Contact.Birthdate,
+            address_line1: null,
+            address_line2: null,
+            city: null,
+            state: null,
+            zip_code: null,
+            marketing_consent: false,
+            tier_calculation_number: 0.00,
+            status: 'Sent'
+        }
+    }
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="members" ><![CDATA[%dw 2.0
+output application/java
+---
+do {
+    var memberIds = vars.members map $.Id
+    var tiersMap = vars.tiers groupBy $.LoyaltyMemberId
+    var pointsMap = vars.points groupBy $.LoyaltyMemberId
+    var spentMap = vars.spent groupBy $.MemberId
+    
+    ---
+    // Step 5: Merge everything
+    vars.members map (member) -> do {
+        var tierData = tiersMap[member.Id as String][0] default {}
+        var pointsData = pointsMap[member.Id as String][0] default {}
+        var spentData = spentMap[member.Id as String][0] default {}
+        ---
+        member ++ {
+            "tier": tierData.Name default null,
+            "points": pointsData.points default 0,
+            "total_spent": spentData.TotalSpent as Number default 0,
+            "items": spentData.TotalItems as Number default 0,
+            "visit_count": spentData.TotalVisits as Number default 0,
+            "last_visit" : if (!isEmpty(spentData.LastVisit)) 
+                spentData.LastVisit as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSSX"} 
+                else null
+            
+        }
+    }
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<db:bulk-insert doc:name="Bulk insert" doc:id="b59cebfa-7e9d-468b-b46f-88bc7047f60a" config-ref="Database_Config">
+					<db:sql ><![CDATA[INSERT INTO customers (
+    sf_id,
+    loyalty_number,
+    first_name,
+    last_name,
+    name,
+    email,
+    phone,
+    points,
+    member_status,
+    member_type,
+    enrollment_date,
+    customer_tier,
+    total_spent,
+    visit_count,
+    last_visit,
+    notes,
+    created_at,
+    status
+) VALUES (
+    :sf_id,
+    :loyalty_number,
+    :first_name,
+    :last_name,
+    :name,
+    :email,
+    :phone,
+    :points,
+    :member_status,
+    :member_type,
+    :enrollment_date,
+    :customer_tier,
+    :total_spent,
+    :visit_count,
+    :last_visit,
+    :notes,
+    CURRENT_TIMESTAMP,
+    'Sent'
+)
+ON CONFLICT (loyalty_number) 
+DO UPDATE SET
+    sf_id = :sf_id,
+    name = :name,
+    email = :email,
+    phone = :phone,
+    points = :points,
+    member_status = :member_status,
+    member_type = :member_type,
+    enrollment_date = :enrollment_date,
+    customer_tier = :customer_tier,
+    total_spent = CASE 
+        WHEN :total_spent > customers.total_spent 
+        THEN :total_spent 
+        ELSE customers.total_spent 
+    END,
+    visit_count = CASE 
+        WHEN :visit_count > customers.visit_count 
+        THEN :visit_count 
+        ELSE customers.visit_count 
+    END,
+    last_visit = CASE 
+        WHEN :last_visit > customers.last_visit 
+        THEN :last_visit 
+        ELSE customers.last_visit 
+    END,
+    notes = :notes,
+    status = 'Sent'
+WHERE 
+    customers.loyalty_number = :loyalty_number;
+
+
+
+]]></db:sql>
+				</db:bulk-insert>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="No Members" doc:id="f81b3381-ed86-4de3-b0d2-cc9410f01531" message="No members to extract!!!" />
+			</otherwise>
+		</choice>
 		<logger level="INFO" doc:name="Logger" doc:id="f8406c6a-6abf-4459-a3eb-cb0d18bc5e0c" message="#[payload]"/>
-		<parallel-foreach doc:name="For Each Member Get Details" doc:id="2b960d26-31e3-4613-a031-e60de569524b" collection="#[payload]">
-			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="a42e41b5-0fdd-48b9-8cf0-4fbd22c06967" variableName="member" />
-			<flow-ref doc:name="Get Details And UPSERT member" doc:id="683d2e1f-f4ea-48d1-aca2-33f464add498" name="get-upsert-member" />
-		</parallel-foreach>
 		<ee:transform doc:name="Transform Message" doc:id="6ea93b9e-e450-4ad7-8330-edf379ba4042">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-payload.payload]]></ee:set-payload>
+payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
 	<sub-flow name="get-member-points-tier" doc:id="129ff45b-ba3c-4e09-968c-d0bfaf674c74" >
+		<logger level="INFO" doc:name="Logger" doc:id="63e31fac-721d-4c92-9914-33b2d3363d10" message="Inside get-member-points for SFID: #[vars.sf_id]"/>
 		<salesforce:query doc:name="Query Points by Member Id" doc:id="b4739999-d6ba-46e4-bf40-d5189a0cd64f" config-ref="Salesforce_Config" target="points">
 				<salesforce:salesforce-query><![CDATA[SELECT LoyaltyMemberId, sum(PointsBalance) PointsBalance, sum(EscrowPointsBalance) EscrowPointsBalance , sum(ExpirablePoints) ExpirablePoints, 
 sum(TotalPointsAccrued) TotalPointsAccrued, sum(TotalPointsExpired) TotalPointsExpired, sum(TotalPointsRedeemed) TotalPointsRedeemed
@@ -141,21 +348,77 @@ output application/java
 				</ee:message>
 			</ee:transform>
 	</sub-flow>
+	<sub-flow name="get-upsert-member" doc:id="4748c3e1-2f5c-44ca-af29-8b7828510eb6">
+		<logger level="INFO" doc:name="Logger" doc:id="d7fe4386-f15a-4400-8f2d-5ae9ae1dc00a" message="Inside get-upsert-memberfor SFID: #[vars.sf_id]" />
+		<choice doc:name="Choice" doc:id="cd6fa80e-cf51-4486-bf1b-985cfaed9a5e">
+			<when expression="#[isEmpty(vars.sf_id)]">
+				<ee:transform doc:name="Transform Message" doc:id="b1f33716-a40b-4db0-bd7e-954e0541b9f7">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	message: "Invalid SF ID, cannot be null",
+	successfull: false
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<flow-ref doc:name="Get Member Points and Tier" doc:id="43ce4f06-bca1-44d9-8870-c152622514ac" name="get-member-points-tier" target="member" />
+				<flow-ref doc:name="UPSERT Member" doc:id="f3dc3103-d68a-424b-a734-c290dbb76e71" name="UpsertMember" />
+				<ee:transform doc:name="Transform Message1" doc:id="0f7a6dee-4030-4d99-9232-8d744cb13c60">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
 	<sub-flow name="UpsertMember" doc:id="fa8887d4-fe2d-44b4-92b2-1943cb2f07c4">
-		<set-payload value='#[%dw 2.0&#10;output application/java&#10;---&#10;{&#10;    sf_id: vars.member.Id,&#10;    loyalty_number: vars.member.MembershipNumber,&#10;    first_name: vars.member.Contact.FirstName,&#10;    last_name: vars.member.Contact.LastName,&#10;    name: vars.member.Contact.Name,&#10;    email: vars.member.Contact.Email,&#10;    phone: vars.member.Contact.Phone,&#10;    points: if (vars.member.points[0].PointsBalance != null) vars.member.points[0].PointsBalance else 0,&#10;    member_status: vars.member.MemberStatus,&#10;    member_type: vars.member.MemberType,&#10;    enrollment_date: vars.member.EnrollmentDate,&#10;    customer_tier: vars.member.tier as String default "Bronze",&#10;    total_spent: vars.member.total_spent,&#10;    visit_count: vars.member.visit_count,&#10;    last_visit: if (!isEmpty(vars.member.last_visit)) vars.member.last_visit else null,&#10;    notes: "Synced from Salesforce",&#10;    preferred_contact: "email",&#10;    date_of_birth: vars.member.Contact.Birthdate,&#10;    address_line1: null,&#10;    address_line2: null,&#10;    city: null,&#10;    state: null,&#10;    zip_code: null,&#10;    marketing_consent: false,&#10;    tier_calculation_number: 0.00&#10;}]' doc:name="Set Payload" doc:id="b9b29a79-907d-48f0-9598-28ef6a27e9e4" />
-		<set-variable value="#[payload]" doc:name="Set customer" doc:id="6821cf8f-3421-4ea8-b57b-4852dc5dae91" variableName="customer"/>
-		<logger level="INFO" doc:name="Logger" doc:id="099b2db0-3776-4dbd-b291-8d81af4a382a" message="#[payload]" />
-		<try doc:name="Try" doc:id="568cc154-9dc1-4720-ac3a-fa1221451ce0" >
-			<db:query-single doc:name="Query single" doc:id="144c1eaa-08a5-4740-9219-af463d09412c" config-ref="Database_Config" target="memberExists">
-				<db:sql ><![CDATA[select exists(select 1 from customers where loyalty_number = ':sfId')]]></db:sql>
-				<db:input-parameters ><![CDATA[#[{
-	sfId: payload.loyalty_number
+		<logger level="INFO" doc:name="Logger" doc:id="0cbc42f9-5203-468c-949c-27c1b064856a" message="Inside upsertMember for SFID: #[vars.sf_id]"/>
+		<set-payload value="#[%dw 2.0&#10;output application/java&#10;---&#10;{&#10;    sf_id: vars.member.Id,&#10;    loyalty_number: vars.member.MembershipNumber,&#10;    first_name: vars.member.Contact.FirstName,&#10;    last_name: vars.member.Contact.LastName,&#10;    name: vars.member.Contact.Name,&#10;    email: vars.member.Contact.Email,&#10;    phone: vars.member.Contact.Phone,&#10;    points: (if (vars.member.points[0].PointsBalance != null) vars.member.points[0].PointsBalance as Number default 0 else 0) as Number,&#10;    member_status: vars.member.MemberStatus,&#10;    member_type: vars.member.MemberType,&#10;    enrollment_date: vars.member.EnrollmentDate,&#10;    customer_tier: vars.member.tier as String default &quot;Bronze&quot;,&#10;    total_spent: vars.member.total_spent,&#10;    visit_count: vars.member.visit_count,&#10;    last_visit: if (!isEmpty(vars.member.last_visit)) vars.member.last_visit else null,&#10;    notes: &quot;Synced from Salesforce&quot;,&#10;    preferred_contact: &quot;email&quot;,&#10;    date_of_birth: vars.member.Contact.Birthdate,&#10;    address_line1: null,&#10;    address_line2: null,&#10;    city: null,&#10;    state: null,&#10;    zip_code: null,&#10;    marketing_consent: false,&#10;    tier_calculation_number: 0.00,&#10;    status: 'Sent'&#10;}]" doc:name="Set Payload" doc:id="b9b29a79-907d-48f0-9598-28ef6a27e9e4" />
+		<db:select doc:name="Select" doc:id="e4f2f655-a8d2-42ab-a20d-2482703f4fc7" config-ref="Database_Config" target="sameData">
+					<db:sql><![CDATA[SELECT EXISTS(SELECT 1
+FROM customers
+WHERE 
+    sf_id = :sf_id
+    AND loyalty_number = :loyalty_number
+    AND first_name = :first_name
+    AND last_name = :last_name
+    AND name = :name
+    AND email = :email
+    AND points = :points
+    AND member_status = :member_status
+    AND member_type = :member_type
+    AND customer_tier = :customer_tier
+    AND total_spent = :total_spent
+    AND visit_count = :visit_count
+)]]></db:sql>
+					<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+				</db:select>
+		<choice doc:name="Choice" doc:id="6a6915ea-8059-4903-861b-7dca492fa73e" >
+			<when expression="#[vars.sameData[0].exists]">
+				<logger level="INFO" doc:name="Logger" doc:id="e40515e4-8510-4fbc-8550-41c004ad50d2" message="Member record for #[vars.member.id] is exacrtly the same, not processing!"/>
+			</when>
+			<otherwise >
+				<set-variable value="#[payload]" doc:name="Set customer" doc:id="6821cf8f-3421-4ea8-b57b-4852dc5dae91" variableName="customer" />
+				<logger level="INFO" doc:name="Logger" doc:id="099b2db0-3776-4dbd-b291-8d81af4a382a" message="#[payload]" />
+				<try doc:name="Try" doc:id="568cc154-9dc1-4720-ac3a-fa1221451ce0">
+			<db:query-single doc:name="Query single" doc:id="144c1eaa-08a5-4740-9219-af463d09412c" config-ref="Database_Config">
+				<db:sql><![CDATA[select exists(select 1 from customers where loyalty_number = :sfId)]]></db:sql>
+				<db:input-parameters><![CDATA[#[{
+	sfId: vars.customer.loyalty_number
 }]]]></db:input-parameters>
 			</db:query-single>
-			<choice doc:name="Choice" doc:id="851375e9-23e7-4db6-8179-7da334d7c93e" >
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="5810fced-f631-4d15-925d-bd5017f71323" variableName="memberExists" />
+			<choice doc:name="Choice" doc:id="851375e9-23e7-4db6-8179-7da334d7c93e">
 				<when expression="#[vars.memberExists.exists]">
 					<db:update doc:name="Update" doc:id="b1bbd1f3-b1a4-43f6-97aa-0a84e74c8834" config-ref="Database_Config">
-						<db:sql ><![CDATA[UPDATE customers SET
+						<db:sql><![CDATA[UPDATE customers SET
     sf_id = :sf_id,
     name = :name,
     email = :email,
@@ -180,15 +443,16 @@ output application/java
         THEN :last_visit 
         ELSE customers.last_visit 
     END,
-    notes = :notes
+    notes = :notes,
+    status = 'Sent'
 WHERE 
     customers.loyalty_number = :loyalty_number;
 ]]></db:sql>
-						<db:input-parameters ><![CDATA[#[vars.customer]]]></db:input-parameters>
+						<db:input-parameters><![CDATA[#[vars.customer]]]></db:input-parameters>
 					</db:update>
-					<logger level="INFO" doc:name="Logger" doc:id="9032881f-8f98-4009-a2b7-7e20cbca8f07" message="Updating customer #[vars.customer.name]"/>
+					<logger level="INFO" doc:name="Logger" doc:id="9032881f-8f98-4009-a2b7-7e20cbca8f07" message="Updating customer #[vars.customer.name]" />
 				</when>
-				<otherwise >
+				<otherwise>
 					<db:insert doc:name="UPSERT Member" doc:id="f827a747-fbb2-4bb4-9888-2127484c7fb7" config-ref="Database_Config">
 			<db:sql><![CDATA[INSERT INTO customers (
     sf_id,
@@ -207,7 +471,8 @@ WHERE
     visit_count,
     last_visit,
     notes,
-    created_at
+    created_at,
+    status
 ) VALUES (
     :sf_id,
     :loyalty_number,
@@ -225,7 +490,8 @@ WHERE
     :visit_count,
     :last_visit,
     :notes,
-    CURRENT_TIMESTAMP
+    CURRENT_TIMESTAMP,
+    'Sent'
 )
 ON CONFLICT (loyalty_number) 
 DO UPDATE SET
@@ -253,21 +519,22 @@ DO UPDATE SET
         THEN :last_visit 
         ELSE customers.last_visit 
     END,
-    notes = :notes
+    notes = :notes,
+    status = 'Sent'
 WHERE 
     customers.loyalty_number = :loyalty_number;
 
 
 
 ]]></db:sql>
-			<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+			<db:input-parameters><![CDATA[#[vars.customer]]]></db:input-parameters>
 		</db:insert>
-					<logger level="INFO" doc:name="Logger" doc:id="d556041a-413b-4b65-8724-f70c1f395555" message="Customer [#[vars.customer.name]] created!!!"/>
+					<logger level="INFO" doc:name="Logger" doc:id="d556041a-413b-4b65-8724-f70c1f395555" message="Customer [#[vars.customer.name]] created!!!" />
 				</otherwise>
 			</choice>
-			<ee:transform doc:name="Transform Message" doc:id="3a8d5f94-1605-4c83-9392-83a7331c6cda" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+			<ee:transform doc:name="Transform Message" doc:id="3a8d5f94-1605-4c83-9392-83a7331c6cda">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
@@ -282,12 +549,12 @@ output application/java
 ]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="096dc039-91f7-4db4-8a83-8f521e96093d" >
-					<logger level="INFO" doc:name="Logger" doc:id="1d2a3eeb-015e-4340-ab61-787cdec1515e" message="Error while trying to upsert member in DB: error: #[error.errorMessage]"/>
-					<ee:transform doc:name="Transform Message" doc:id="9a3359e0-a25c-479b-859a-f0a5f27bf447" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="096dc039-91f7-4db4-8a83-8f521e96093d">
+					<logger level="INFO" doc:name="Logger" doc:id="1d2a3eeb-015e-4340-ab61-787cdec1515e" message="Error while trying to upsert member in DB: error: #[error.errorMessage]" />
+					<ee:transform doc:name="Transform Message" doc:id="9a3359e0-a25c-479b-859a-f0a5f27bf447">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
@@ -305,6 +572,8 @@ output application/java
 				</on-error-continue>
 			</error-handler>
 		</try>
+			</otherwise>
+		</choice>
 		<logger level="DEBUG" doc:name="Debug Record" doc:id="68d3f6bb-7bc7-4a6a-b8e9-824448dc8318" message="Upserted record: #[vars.member.name]" />
 	</sub-flow>
 	<sub-flow name="sync-member" doc:id="043df3cb-6dd0-4d78-85c9-79576cf32a31">
@@ -451,49 +720,6 @@ output application/java
 output application/json
 ---
 payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</flow>
-	<flow name="get-netinfo" doc:id="dd064214-bb70-46a9-b60a-48eb5ef7fb71" >
-		<http:listener doc:name="Listener" doc:id="89f3ec6a-12b8-4b28-a673-d65eae5dd400" path="/netinfo" config-ref="HTTP_Listener_config"/>
-		<set-variable value="#[attributes]" doc:name="Set Variable" doc:id="7b117ff2-d794-448d-9328-31000f9962ca" variableName="attributes"/>
-		<ee:transform doc:name="Transform Message" doc:id="a2f1669a-7b95-421e-8506-b012aff008cb" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-{
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<http:request method="GET" doc:name="Get Public IP" doc:id="3d5be334-1c31-48de-9981-7d5490eb93d4" config-ref="HTTP_Request_configuration" url="https://api.ipify.org?format=json" target="publicip"/>
-		<java:invoke-static doc:name="Get Public Hostname" doc:id="fdd99c7e-c260-4ab7-b279-6a9613bf44a2" class="com.mulesoft.DnsNameResolver" method="getHostName(java.lang.String)" target="hostname">
-			<java:args ><![CDATA[#[{
-	ipAddress: vars.publicip.ip
-}]]]></java:args>
-		</java:invoke-static>
-		<java:invoke-static method="getPublicHostname()" doc:name="Invoke static" doc:id="c3ba2d87-811c-40da-90cc-e434d393600c" class="com.mulesoft.DnsNameResolver"/>
-		<ee:transform doc:name="Transform Message" doc:id="8cbbb9fb-9379-4136-a425-ecb6e847f912" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
-import dw::System
-import * from dw::Runtime
-import java!org::mule::runtime::core::api::util::NetworkUtils
----
-{
-	"domain": p('api.domain'),
-	"host": p('api.host'),
-	"api": p('api'),
-	"attributes": vars.attributes,
-	"hostname": vars.hostname,
-	"localhost": payload as String default "",
-	"dw_localhost": (NetworkUtils::getLocalHost()).hostName,
-	"envVars" : dw::System::envVars(),
-	"props" : props(),
-	"publicip": vars.publicip.ip
-}
-]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
@@ -686,18 +912,6 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<sub-flow name="get-upsert-member" doc:id="4748c3e1-2f5c-44ca-af29-8b7828510eb6">
-		<flow-ref doc:name="Get Member Points and Tier" doc:id="43ce4f06-bca1-44d9-8870-c152622514ac" name="get-member-points-tier" target="member" />
-		<flow-ref doc:name="UPSERT Member" doc:id="f3dc3103-d68a-424b-a734-c290dbb76e71" name="UpsertMember" />
-		<ee:transform doc:name="Transform Message1" doc:id="0f7a6dee-4030-4d99-9232-8d744cb13c60" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-	</sub-flow>
 	<sub-flow name="temp-proc-member" doc:id="6692a275-92db-467f-ab38-384ca5cd3769" >
 		<salesforce:query doc:name="Query" doc:id="d5ffe250-22be-4603-b984-efc7227a9253" config-ref="Salesforce_Config">
 			<salesforce:salesforce-query><![CDATA[SELECT id, ContactID, Contact.name, Contact.FirstName, Contact.LastName, Contact.Email, Contact.phone, Contact.Birthdate,  Contact.AccountId,
@@ -714,6 +928,7 @@ WHERE Id = ':id']]></salesforce:salesforce-query>
 }]]]></salesforce:parameters>
 		</salesforce:query>
 		<set-variable value="#[payload[0]]" doc:name="Set Variable" doc:id="7a2413ff-6b50-4166-b433-aece22e0a018" variableName="member" />
+		<set-variable value="#[vars.member.Id]" doc:name="Set sf_id" doc:id="18791b8f-b8ea-44cc-820b-b8205575b9a4" variableName="sf_id" />
 		<flow-ref doc:name="Get Details And UPSERT member" doc:id="db8902b9-b04c-4ede-aac7-4bf9fee3583e" name="get-upsert-member" />
 		<logger level="INFO" doc:name="Log new member" doc:id="ff6760d3-0cf0-419a-bb96-7c178957708e" message="New Member Created #{#[payload]" />
 		<async doc:name="Async" doc:id="2d1fa2dc-f185-47cb-a889-a6417262298b">
@@ -740,11 +955,13 @@ sf_id: vars.sf_id
 	<flow name="loyalty-new-member" doc:id="a8678fc7-3cd1-43e9-9e1f-f33b4d174377" initialState="started">
 		<salesforce:new-object-listener doc:name="On New Member" doc:id="ea64a571-b84e-4880-89d0-76af5be81c60" config-ref="Salesforce_Config" objectType="LoyaltyProgramMember">
 			<scheduling-strategy >
-				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+				<fixed-frequency frequency="${sfdc.frecuency}" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</salesforce:new-object-listener>
+		<logger level="INFO" doc:name="Logger" doc:id="2dbd5938-a474-4314-930b-dc2d6fa5c213" message="Inside new Member"/>
 		<set-variable value="#[payload.Id]" doc:name="Set sf_id" doc:id="1de75363-2077-4caf-be8d-5675074effca" variableName="sf_id" />
 		<set-variable value="New Member Created" doc:name="Set Message" doc:id="c565f1ad-43e8-49cd-b77e-acdefdecde83" variableName="message" />
+		<logger level="INFO" doc:name="Logger" doc:id="0205222b-c594-437e-b0ff-38c1f1ef5c88" message="loyalty-new-member -&gt; About to call loyalty-process-incoming-member"/>
 		<flow-ref doc:name="Flow Reference" doc:id="4cded6e0-839d-4adb-a929-22c0091bd0a3" name="loyalty-process-incoming-member" />
 		<error-handler >
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0a6e5edd-fe4e-421b-945f-4aeb2afc78a5" >
@@ -754,8 +971,10 @@ sf_id: vars.sf_id
 	</flow>
 	<flow name="loyalty-pull-member-by-sfid" doc:id="f6f19ca0-9c87-4a67-b10f-5d429750779b" >
 		<http:listener doc:name="GET /members/pull/[id]" doc:id="c2e2bd72-23a9-4544-9120-ee8b676f4a03" config-ref="HTTP_Listener_config" path="/members/pull"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7d678acb-bade-4f33-a402-02ed894ba7e7" message="Calling /member/pull?sfId=#[attributes.queryParams.sfId]"/>
 		<set-variable value="#[attributes.queryParams.sfId]" doc:name="Set sf_id" doc:id="592bf071-9511-4943-9897-af3226b8ce75" variableName="sf_id" />
 		<set-variable value="Force Pulling Member " doc:name="Set Message" doc:id="b9d76711-51ae-4f27-b08f-63421ce434e4" variableName="message"/>
+		<set-payload value="#[{&#10;	id: vars.sf_id&#10;}]" doc:name="Set Payload" doc:id="889c3c43-4203-4486-9cbe-ab56e6789b9d" />
 		<flow-ref doc:name="Flow Reference" doc:id="31058e81-c2f0-413c-ba84-cf2a5354ca2c" name="loyalty-process-incoming-member" />
 		<ee:transform doc:name="Transform Message" doc:id="a628b7fc-f28a-45e3-9cfc-e50870adda49" >
 			<ee:message >
@@ -767,6 +986,7 @@ payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<sub-flow name="loyalty-process-incoming-member" doc:id="706fef5c-ba6b-4feb-853c-68552fd36e67" >
+		<logger level="INFO" doc:name="Logger" doc:id="7a91b611-ae1f-4464-8eda-ddebd6894bfa" message="Inside loyalty-process-incoming-member for SFID: #[vars.sf_id]"/>
 		<salesforce:query doc:name="Query" doc:id="9ac2187d-37a8-4e76-9049-92f0670374ba" config-ref="Salesforce_Config">
 			<salesforce:salesforce-query><![CDATA[SELECT id, ContactID, Contact.name, Contact.FirstName, Contact.LastName, Contact.Email, Contact.phone, Contact.Birthdate,  Contact.AccountId,
 ProgramId, MemberStatus, MemberType, MembershipNumber,
@@ -778,15 +998,20 @@ WHERE Id = ':id']]></salesforce:salesforce-query>
 			<salesforce:parameters><![CDATA[#[output application/java
 ---
 {
-	"id" : payload.Id
+	"id" : vars.sf_id
 }]]]></salesforce:parameters>
 		</salesforce:query>
 		<set-variable value="#[payload[0]]" doc:name="Set Variable" doc:id="dc0f43ee-b3cd-4d23-908e-ee83b01e37f9" variableName="member" />
-		<logger level="INFO" doc:name="Logger" doc:id="415f1f7e-9fcb-49d6-9e77-9680d70915c2" message="About to modify Customer: #[vars.member.Contact.Name]" />
+		<set-variable value="#[vars.member.Id]" doc:name="Set sf_id" doc:id="6831a7c2-0dbb-4ca3-b3fd-9c8e1b17af1d" variableName="sf_id" />
+		<logger level="INFO" doc:name="Logger" doc:id="415f1f7e-9fcb-49d6-9e77-9680d70915c2" message="About to #[vars.message] Customer: #[vars.member.Contact.Name]" />
 		<flow-ref doc:name="Get Details And UPSERT member" doc:id="0d63fd92-8236-4fcc-9dd9-a5399a3fffac" name="get-upsert-member" />
 		<logger level="INFO" doc:name="Log updated member" doc:id="64fc61c8-4df6-473d-924a-30df8a205f43" message="#[vars.message] - #{#[payload]" />
-		<async doc:name="Async" doc:id="4d9e89ad-8e09-47fb-b7e6-b38b532ed70a">
-			<db:query-single doc:name="Query single" doc:id="f25a36cc-ab58-458c-b8c1-bfc4a9860c3f" config-ref="Database_Config">
+		<choice doc:name="Choice" doc:id="76fa7aae-d028-4b2c-b950-ddc2001400af" >
+			<when expression="#[vars.sameData[0].exists]">
+				<logger level="INFO" doc:name="Logger" doc:id="54aa99ba-1438-42c5-b255-195ed355fc44" message="No need to get vouchers"/>
+			</when>
+			<otherwise >
+				<db:query-single doc:name="Query single" doc:id="f25a36cc-ab58-458c-b8c1-bfc4a9860c3f" config-ref="Database_Config">
 				<db:sql><![CDATA[select id
 from customers
 where sf_id = :sf_id]]></db:sql>
@@ -795,21 +1020,22 @@ sf_id: vars.sf_id
 
 }]]]></db:input-parameters>
 			</db:query-single>
-			<set-variable value="#[payload.id]" doc:name="Set member" doc:id="8787158f-3151-46a1-be5a-e599789376be" variableName="member" />
-			<choice doc:name="Choice" doc:id="b330c638-71ec-45eb-a9a7-35a1fcd8295b">
+				<set-variable value="#[payload.id]" doc:name="Set member" doc:id="8787158f-3151-46a1-be5a-e599789376be" variableName="member" />
+				<choice doc:name="Choice" doc:id="b330c638-71ec-45eb-a9a7-35a1fcd8295b">
 				<when expression="#[isEmpty(vars.member)]">
 					<logger level="INFO" doc:name="Logger" doc:id="07be2d72-0216-42a4-ad17-f7a88cc22a74" message="Cannot get vouchers for customer #[vars.sf_id]" />
 				</when>
 				<otherwise>
-					<flow-ref doc:name="Flow Reference" doc:id="ac4bb77b-eecc-4162-83ea-f1f29ebc6a61" name="get-member-vouchers" />
+					<flow-ref doc:name="Get member Vouchers" doc:id="ac4bb77b-eecc-4162-83ea-f1f29ebc6a61" name="get-member-vouchers" />
 				</otherwise>
 			</choice>
-		</async>
+			</otherwise>
+		</choice>
 	</sub-flow>
 	<flow name="loyalty-on-modified-member" doc:id="1ff5522c-c552-4d45-8917-577103b5aaf4" initialState="started">
 		<salesforce:modified-object-listener doc:name="On Modified Object" doc:id="f0d416c8-384f-44fe-855f-f21b3853346b" config-ref="Salesforce_Config" objectType="LoyaltyProgramMember">
 			<scheduling-strategy >
-				<fixed-frequency frequency="1" timeUnit="SECONDS"/>
+				<fixed-frequency frequency="${sfdc.frecuency}" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</salesforce:modified-object-listener>
 		<set-variable value="#[payload.Id]" doc:name="Set sf_id" doc:id="d81c45d0-296b-416f-a191-886a9f6a28a2" variableName="sf_id"/>
@@ -817,7 +1043,7 @@ sf_id: vars.sf_id
 		<flow-ref doc:name="Flow Reference" doc:id="8db8b6fe-c271-418e-9e08-137784182c0c" name="loyalty-process-incoming-member"/>
 		<error-handler >
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="34f26156-40e2-40b3-9d0f-9e333eff91a2" >
-				<logger level="ERROR" doc:name="Log Error" doc:id="1dca5ed8-aa02-4d6c-b3bf-4f922fbe226d" message="#[%dw 2.0&#10;output application/json&#10;---&#10;payload]"/>
+				<logger level="ERROR" doc:name="Log Error" doc:id="1dca5ed8-aa02-4d6c-b3bf-4f922fbe226d" message="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	error: error.description ,&#10;	payload: payload&#10;}]"/>
 			</on-error-continue>
 		</error-handler>
 	</flow>
@@ -889,14 +1115,15 @@ payload]]></ee:set-payload>
 	</flow>
 	<flow name="loyalty-on-new-transaction" doc:id="babe8d6a-9b5c-4cfc-af55-46e1144a0661" initialState="started">
 		<db:listener table="transactions" doc:name="On Table Row" doc:id="a92b9d3d-f0e9-4f81-9e1a-e5beaf290a77" watermarkColumn="created_at" idColumn="id" config-ref="Database_Config">
+			<redelivery-policy maxRedeliveryCount="2" objectStore="Object_store" />
 			<scheduling-strategy >
-				<fixed-frequency frequency="10" timeUnit="SECONDS" />
+				<fixed-frequency frequency="${db.frecuency}" timeUnit="SECONDS" />
 			</scheduling-strategy>
 		</db:listener>
 		<logger level="INFO" doc:name="Logger" doc:id="cda2e2b9-004a-4881-8343-e9c7238a50dc" message="Sending to Salesforce transaction number: #[payload.id]"/>
-		<set-variable value="id" doc:name="Set Variable" doc:id="ac3b1762-d2c8-4949-964c-568b8a0d63b1" variableName="transaction"/>
+		<set-variable value="#[payload]" doc:name="Set transaction" doc:id="ac3b1762-d2c8-4949-964c-568b8a0d63b1" variableName="transaction"/>
 		<choice doc:name="Choice" doc:id="55cd4709-9165-45df-bb74-90b9085ed003" >
-			<when expression="#[vars.transaction.status == 'Created']">
+			<when expression="#[payload.status == 'Created']">
 				<ee:transform doc:name="New Transaction Row" doc:id="38321dad-fdf6-461d-bbbc-1c9303ad425c">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
@@ -931,7 +1158,7 @@ and l.id = t.location_id
 and c.id = t.customer_id 
 and t.id = :id]]></db:sql>
 			<db:input-parameters><![CDATA[#[{
-	"id" : payload.id
+	"id" : vars.transaction.id
 }]]]></db:input-parameters>
 		</db:select>
 				<ee:transform doc:name="Map Fields" doc:id="31366d8f-99ba-4ce7-a66b-86162c89af91">
@@ -988,9 +1215,9 @@ payload]]></ee:set-payload>
 	</flow>
 	<flow name="update-loyalty-member-sf" doc:id="41f29916-4982-4245-a6bc-b6e435a4ce17" initialState="started">
 		<db:listener doc:name="On Modified Customer" doc:id="fdc41d49-b357-436f-9f5a-17afc3120af8" config-ref="Database_Config" table="customers" watermarkColumn="updated_at" idColumn="id">
-			<redelivery-policy />
+			<redelivery-policy maxRedeliveryCount="2" objectStore="Object_store"/>
 			<scheduling-strategy >
-				<fixed-frequency frequency="10000"/>
+				<fixed-frequency frequency="${db.frecuency}" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</db:listener>
 		<choice doc:name="Choice" doc:id="76caee85-f453-474b-9196-cd9f1942636c" >
@@ -1041,8 +1268,9 @@ where id = :id]]></db:sql>
 	</flow>
 	<flow name="loyalty-update-sf-products" doc:id="b34a97f0-ab6a-4a5f-88e3-91497e1c7cce" initialState="started">
 		<db:listener table="products" doc:name="On Modified Product" doc:id="f572a5e9-7f80-470c-8e10-5be0610947fa" config-ref="Database_Config" watermarkColumn="updated_at" idColumn="id">
+			<redelivery-policy maxRedeliveryCount="2" objectStore="Object_store" />
 			<scheduling-strategy >
-				<fixed-frequency frequency="10" timeUnit="SECONDS" />
+				<fixed-frequency frequency="${db.frecuency}" timeUnit="SECONDS" />
 			</scheduling-strategy>
 		</db:listener>
 		<choice doc:name="Choice" doc:id="c9478a13-d5cd-43a0-82e8-34b36864fe86" >
@@ -1206,11 +1434,19 @@ where id = :id]]></db:sql>
 	</sub-flow>
 	<flow name="loyalty-on-new-customer-image" doc:id="4ccf60e7-d479-404f-9197-bc1265a55d50" initialState="started">
 		<db:listener doc:name="On Table Row" doc:id="d26c4360-9e25-433d-b278-f76f44abac49" config-ref="Database_Config" table="customer_images" watermarkColumn="created_at" idColumn="id">
+			<redelivery-policy maxRedeliveryCount="2" objectStore="Object_store" />
 			<scheduling-strategy >
-				<fixed-frequency />
+				<fixed-frequency frequency="${db.frecuency}" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</db:listener>
-		<flow-ref doc:name="Send Image" doc:id="7f3f9d37-6764-428f-9250-0b434d03af86" name="loyalty-send-image" />
+		<choice doc:name="Choice" doc:id="7256c7ef-7e19-4de0-ab93-05a814ad5390" >
+			<when expression="#[payload.status == 'Sent']">
+				<logger level="INFO" doc:name="Logger" doc:id="0a7d894d-a519-4d27-8085-5963f2c299f9" message="Image [ #[payload.filename] ] for customer #[payload.icustomer_d] already sent!"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="Send Image" doc:id="7f3f9d37-6764-428f-9250-0b434d03af86" name="loyalty-send-image" />
+			</otherwise>
+		</choice>
 	</flow>
 	<flow name="send-vouchers-to-salesforce" doc:id="b4f4bf3c-f111-4401-a053-5c7cee244bce" >
 		<http:listener doc:name="POST /members/vouchers/send" doc:id="6c5d831d-ca84-4f30-82da-6a48f3091f27" config-ref="HTTP_Listener_config" path="/members/vouchers/send"/>
@@ -1258,5 +1494,40 @@ output application/json
 				<logger level="INFO" doc:name="Logger" doc:id="dae24ea5-9fe3-4094-b3bf-cb15ba269db8" message="Voucher Code: #[payload.voucher_code] Status: #[payload.status] not processed! and Used? #[!isEmpty(payload.use_date)]"/>
 			</otherwise>
 		</choice>
+	</flow>
+	<flow name="loyalty-bulk-sync-members1" doc:id="42d40da2-9d49-4789-ae1f-28c7133ab862" >
+		<http:listener doc:name="GET /bulk/sync/members" doc:id="799eb37a-707d-49bb-a034-fd169032a564" config-ref="HTTP_Listener_config" path="/bulk/sync/members/works" />
+		<salesforce:query-all doc:name="Query all" doc:id="808966b8-8877-405d-ad7b-bf0f40736145" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[SELECT id, ContactID, Contact.name, Contact.FirstName, Contact.LastName, Contact.Email, Contact.phone, Contact.Birthdate,  Contact.AccountId,
+ProgramId, MemberStatus, MemberType, MembershipNumber,
+GroupName, External_ID__c, EnrollmentDate, EnrollmentChannel,
+Contact.MailingAddress,
+Contact.Account.PersonBirthdate, Contact.Account.FirstName, Contact.Account.LastName, 
+Contact.Account.BillingAddress, Contact.Account.PersonEmail, Contact.Account.PersonMailingAddress, Contact.Account.Website
+FROM LoyaltyProgramMember
+WHERE ProgramId = ':program'
+]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"program" : attributes.queryParams.program
+}]]]></salesforce:parameters>
+		</salesforce:query-all>
+		<logger level="INFO" doc:name="Logger" doc:id="f3c0e451-afe4-4d4b-a2e7-ab6a9a9a1803" message="#[payload]" />
+		<set-variable value="#[[] as Array]" doc:name="Set ACC" doc:id="9fb486d4-2f9a-40ce-8a8c-467ce41c4522" variableName="members" />
+		<foreach doc:name="For Each" doc:id="4a78082e-3bb0-42b3-858f-86d0df2535ba" >
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="b277acd5-99bf-4505-822e-a7ddb43e440a" variableName="member" />
+			<set-variable value="#[vars.member.Id]" doc:name="Set sf_id" doc:id="d9df2bdd-3320-4bae-a0c8-4b384711141d" variableName="sf_id" />
+			<flow-ref doc:name="Get Details And UPSERT member" doc:id="e477732c-e720-4439-9fc8-23c08921ec3a" name="get-upsert-member" />
+			<set-variable value="#[vars.acc &lt;&lt; payload]" doc:name="Set ACC" doc:id="a3ed5acf-4435-4384-8057-0096f982c492" variableName="acc" />
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="271f9533-dbf3-4086-96f3-abd10460a630" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.acc]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
 	</flow>
 </mule>
