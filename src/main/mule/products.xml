@@ -47,7 +47,7 @@ output application/json
 			<db:sql ><![CDATA[select get_next_batch_number()]]></db:sql>
 		</db:select>
 		<set-variable value='#[attributes.queryParams.n as Number {format : "#" } default 1]' doc:name="Set Variable" doc:id="1eb178c0-a5c2-4724-9654-8e5bb833074f" variableName="numberOfProds"/>
-		<set-variable value="#[%dw 2.0&#10;import p from Mule&#10;---&#10;p('use_openai') as Boolean default true]" doc:name="Use OpenAI?" doc:id="26a6610b-3bb6-444d-bf44-d547517023f4" variableName="openai" />
+		<set-variable value="#[%dw 2.0&#10;import p from Mule&#10;---&#10;p('mac.use_openai') as Boolean default false]" doc:name="Use OpenAI?" doc:id="26a6610b-3bb6-444d-bf44-d547517023f4" variableName="openai" />
 		<choice doc:name="Choice" doc:id="551a6b41-4ca4-487e-b3a1-3b21d07a33e7" >
 			<when expression="#[vars.openai]">
 				<set-variable value="#[[vars.numberOfProds]]" doc:name="Set Variable" doc:id="9c022834-b634-4724-ae93-c89fe15dc158" variableName="nums"/>
@@ -156,14 +156,7 @@ where id = :id]]></db:sql>
 				</db:select>
 			</otherwise>
 		</choice>
-		<choice doc:name="Choice1" doc:id="d68bd394-7c46-41c7-b1e2-4d69f7b69db3" >
-			<when expression="!isEmpty(p('mac.openai_key'))" >
-				<set-variable value="#[true as Boolean]" doc:name="Set OpenAI = true" doc:id="a5b3ffa5-c615-4750-954c-ea18878f86c8" variableName="openai" />
-			</when>
-			<otherwise >
-				<set-variable value="#[false as Boolean]" doc:name="Set OpenAI = false" doc:id="3492b619-7666-42d2-a36d-d6580b55c117" variableName="openai" />
-			</otherwise>
-		</choice>
+		<set-variable value="#[(!isEmpty(p('mac.use_openai')) and p('mac.use_openai') == 'true') as Boolean]" doc:name="Use OpenAI" doc:id="a5b3ffa5-c615-4750-954c-ea18878f86c8" variableName="openai" />
 		<parallel-foreach doc:name="Parallel For Each" doc:id="45394f79-1c04-4a84-8a90-7c58e8d0dd5d">
 			<set-variable value='#[%dw 2.0&#10;output text/plain&#10;---&#10;write(payload, "application/json", {indent: false})]' doc:name="Set Variable" doc:id="66a79133-7736-464f-9a4a-7d152dd4fd0c" variableName="record" />
 			<set-variable value="#[%dw 2.0&#10;import replaceAll from dw::core::Strings&#10;&#10;var prompt = readUrl(&quot;classpath://improve_products_prompt.txt&quot;,&quot;text/plain&quot;)&#10;&#10;output text/plain&#10;---&#10;replaceAll(prompt  as String default &quot;&quot;,'&lt;product&gt;', vars.record as String default &quot;&quot;)]" doc:name="Prompt" doc:id="29059d99-0d8b-4523-95f6-e210601f00db" variableName="prompt" />

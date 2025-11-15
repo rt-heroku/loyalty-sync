@@ -18,4 +18,4 @@ sfdc:
 
 mac:
   send_batches_size: "2"
-  use_openai: "true"
+  use_openai: "false"

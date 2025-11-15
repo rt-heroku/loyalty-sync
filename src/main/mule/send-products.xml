@@ -299,8 +299,55 @@ output application/java
 					<set-variable value="#[payload.items[0].payload.id]" variableName="productSfId" doc:name="Set Product SF ID" />
 				</otherwise>
 			</choice>
-            <logger level="DEBUG" doc:name="Logger" doc:id="0565b06d-3b46-40bc-8247-3b2dbf7afc46" message="Product Upserted with id: #[vars.productSfId] and full payload #[output application/json --- payload]"/>
-			<set-variable value="#[payload[0].created]" variableName="wasCreated" doc:name="Set Created Flag"/>
+            <set-variable value="#[payload]" doc:name="Set Product Payload" doc:id="ca6ac1ac-a24d-4a26-8ee8-9880258632e7" variableName="createdProduct"/>
+			<until-successful maxRetries="5" doc:name="Until Successful" doc:id="a9d2a6ef-cedf-4c18-b0d2-bf2d60a7ddc7" millisBetweenRetries="1">
+				<salesforce:query doc:name="Query" doc:id="7d5ca535-85f3-4b55-a058-801e19ff377c" config-ref="Salesforce_Config" >
+					<salesforce:salesforce-query ><![CDATA[SELECT Id, IsActive
+FROM Pricebook2
+WHERE IsStandard = true
+]]></salesforce:salesforce-query>
+				</salesforce:query>
+				<choice doc:name="Choice" doc:id="530a18e2-1020-442d-a9da-f56440a54a4b" >
+					<when expression="#[isEmpty(payload[0]) or (!(payload[0].IsActive default false))]">
+						<logger level="INFO" doc:name="Logger" doc:id="1fb06cd7-0983-42dd-94dd-32dc63d6f88b" message="Activating Price Book ID = #[payload[0].Id]"/>
+						<ee:transform doc:name="Transform Message" doc:id="914535ca-d417-4735-94c9-c88d952e5af4">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	Id: payload01.Id,
+	IsActive: true
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<salesforce:update doc:name="Activate Price Book" doc:id="6379006b-4f5d-45fa-8ae7-cf53e1891c10" config-ref="Salesforce_Config" type="Pricebook2"/>
+						<raise-error doc:name="Raise error" doc:id="7e3683ec-9a8b-4081-9f79-8c4e6cafc790" type="MULE:CONNECTIVITY" description="Service not done yet" />
+					</when>
+					<otherwise >
+						<set-variable value="#[payload[0].Id]" doc:name="Save Pricebook Id" doc:id="579b71fc-a52d-4e1a-9d12-ae9259f293fd" variableName="pricebookId" />
+						<ee:transform doc:name="Transform Message" doc:id="3f4042d1-bcbf-44dd-b16a-807ab08551d5">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	Pricebook2Id: payload01.Id,
+	Product2Id: vars.productSfId,
+	UnitPrice: vars.product.price,
+	IsActive: true and vars.product.is_active,
+	UseStandardPrice: false,
+	External_ID__c: vars.product.id as String
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<salesforce:upsert doc:name="Upsert Price Book Entry" doc:id="2ff1072e-a8b7-4756-8ea2-7ab16736b51c" config-ref="Salesforce_Config" objectType="PricebookEntry" externalIdFieldName="External_ID__c"/>
+						<logger level="INFO" doc:name="Logger" doc:id="321b2447-37fd-4d0f-889b-d660aeebb865" message="PriceBookEntry upserted - #[output application/json --- payload]"/>
+					</otherwise>
+				</choice>
+			</until-successful>
+			<logger level="DEBUG" doc:name="Logger" doc:id="0565b06d-3b46-40bc-8247-3b2dbf7afc46" message="Product Upserted with id: #[vars.productSfId] and full payload #[output application/json --- vars.createdProduct]"/>
+			<set-variable value="#[vars.createdProduct.created]" variableName="wasCreated" doc:name="Set Created Flag"/>
             
             <!-- Update local database with Salesforce ID if created -->
             

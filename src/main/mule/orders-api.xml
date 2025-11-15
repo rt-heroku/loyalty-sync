@@ -1,0 +1,791 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+  http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+  http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+  http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+
+    <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="fbab08b9-eae9-4f6a-b910-3165c32050c1" />
+	<flow name="get-all-orders-with-items-salesforce" doc:id="50a56488-40ea-4b6b-9741-2d1ae345b471">
+        <http:listener doc:name="GET /orders/salesforce" doc:id="041f214f-ee57-4d8b-b592-f957920ffa94" config-ref="HTTP_Listener_config" path="/orders/salesforce" />
+        <logger level="INFO" doc:name="Logger" doc:id="70054c8f-5b76-426e-bb2d-7d3ca6a64b2c" message="GET All orders with Order Items from Salesforce - Flow started" />
+        <salesforce:query doc:name="Query Orders and Order Items" doc:id="46c21293-de04-46bb-8a7c-e422c166961f" config-ref="Salesforce_Config">
+            <salesforce:salesforce-query><![CDATA[SELECT Id, Name, OrderNumber,OrderReferenceNumber, Description, TotalAmount, Type, Status, CreatedDate, 
+Account.Id, Account.Name, Account.PersonEmail, Account.PersonMobilePhone, Account.BillingAddress,
+(SELECT Id, OrderItemNumber, 
+Product2.Id, Product2.Name, Product2.External_ID__c, Product2.StockKeepingUnit, Product2.ProductCode, Product2.Family, Product2.DisplayUrl, Product2.Description, Product2.AvailabilityDate,
+Quantity, UnitPrice, TotalPrice FROM OrderItems) 
+FROM Order
+]]></salesforce:salesforce-query>
+        </salesforce:query>
+        <logger level="INFO" doc:name="Logger" doc:id="b344498d-eab2-4d5d-bee7-90a6edf88a6c" message="Salesforce Query Executed Successfully" />
+        <logger level="DEBUG" doc:name="Debug Orders" doc:id="a1424227-de49-46ee-938d-a9fa67a6ce5d" message="#[output application/json --- payload]"/>
+		<ee:transform doc:name="Transform Salesforce Response" doc:id="95384aef-9423-4e76-a07e-f8155a8d6ddf">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map (order, index) -> {
+    id: order.Id,
+    order_number_sf: order.OrderNumber,
+    order_number: order.OrderReferenceNumber,
+    description: order.Description,
+    customer: {
+    	name: order.Account.Name,
+    	id: order.Account.Id, 
+    	email: order.Account.PersonEmail,
+    	billing_address: (if (isEmpty(order.Account.BillingAddress)) order.Account.BillingAddress - "longitude" - "latitude" -"geocodeAccuracy" - "stateCode" - "countryCode" else null),
+    	phone: order.Account.PersonMobilePhone
+    },
+    status: order.Status,
+    total_amount: order.TotalAmount,
+    created_date: order.CreatedDate,
+    order_items: order.OrderItems default [] map (item, itemIndex) -> {
+        id: item.Id,
+        order_item_number: item.OrderItemNumber,
+        quantity: item.Quantity,
+        unit_price: item.UnitPrice,
+        total_price: item.TotalPrice,
+        product: (item.Product2 )
+    }
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get-all-orders-with-items-database" doc:id="afafd315-1803-4c71-88c5-31109cce7ab0">
+        <http:listener doc:name="GET /orders/database" doc:id="c9ebb61e-11fc-4d5e-912a-40ada40217a9" config-ref="HTTP_Listener_config" path="/orders/database" />
+        <logger level="INFO" doc:name="Logger" doc:id="9a823e5c-0502-4483-9e77-15e2e283a69b" message="GET All orders with Order Items from Database - Flow started" />
+        <db:select doc:name="Query Orders with Items" doc:id="ad4a3826-6ddf-495a-bf87-928536df3a59" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[SELECT 
+    o.id as order_id,
+    o.sf_id as order_sf_id,
+    o.order_number,
+    o.customer_id,
+    o.location_id,
+    o.order_date,
+    o.status,
+    o.origin,
+    o.subtotal,
+    o.discount_amount,
+    o.tax_amount,
+    o.total_amount,
+    o.voucher_id,
+    o.voucher_discount,
+    o.coupon_code,
+    o.coupon_discount,
+    o.payment_method,
+    o.transaction_id,
+    o.notes as order_notes,
+    o.created_by,
+    o.updated_at,
+    o.completed_at,
+    oi.id as item_id,
+    oi.sf_id as item_sf_id,
+    oi.product_id,
+    oi.product_name,
+    oi.product_sku,
+    oi.product_image_url,
+    oi.quantity,
+    oi.unit_price,
+    oi.tax_amount as item_tax_amount,
+    oi.discount_amount as item_discount_amount,
+    oi.voucher_discount as item_voucher_discount,
+    oi.total_price,
+    oi.notes as item_notes,
+    oi.created_at as item_created_at
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+ORDER BY o.id, oi.id]]>
+            </db:sql>
+        </db:select>
+        <ee:transform doc:name="Transform to Orders with Items" doc:id="23bd7088-cad7-4a16-8c02-09323a23c6b0">
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[%dw 2.0
+output application/json
+---
+(payload groupBy $.order_id) pluck (orderItems, orderId) -> {
+    id: orderItems[0].order_id,
+    sf_id: orderItems[0].order_sf_id,
+    order_number: orderItems[0].order_number,
+    customer_id: orderItems[0].customer_id,
+    location_id: orderItems[0].location_id,
+    order_date: orderItems[0].order_date,
+    status: orderItems[0].status,
+    origin: orderItems[0].origin,
+    subtotal: orderItems[0].subtotal,
+    discount_amount: orderItems[0].discount_amount,
+    tax_amount: orderItems[0].tax_amount,
+    total_amount: orderItems[0].total_amount,
+    voucher_id: orderItems[0].voucher_id,
+    voucher_discount: orderItems[0].voucher_discount,
+    coupon_code: orderItems[0].coupon_code,
+    coupon_discount: orderItems[0].coupon_discount,
+    payment_method: orderItems[0].payment_method,
+    transaction_id: orderItems[0].transaction_id,
+    notes: orderItems[0].order_notes,
+    created_by: orderItems[0].created_by,
+    updated_at: orderItems[0].updated_at,
+    completed_at: orderItems[0].completed_at,
+    order_items: orderItems filter ($.item_id != null) map (item, index) -> {
+        id: item.item_id,
+        sf_id: item.item_sf_id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_sku: item.product_sku,
+        product_image_url: item.product_image_url,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_amount: item.item_tax_amount,
+        discount_amount: item.item_discount_amount,
+        voucher_discount: item.item_voucher_discount,
+        total_price: item.total_price,
+        notes: item.item_notes,
+        created_at: item.item_created_at
+    }
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get-orders-by-account-salesforce" doc:id="c16b8760-646d-49b0-9244-7e80a2ef092f">
+        <http:listener doc:name="GET /orders/salesforce/account" doc:id="53cc1f8c-73ac-47df-b7a6-6de05112f435" config-ref="HTTP_Listener_config" path="/orders/salesforce/account" />
+        <logger level="INFO" doc:name="Logger" doc:id="63481b1c-e1d7-4ad2-a5aa-a098243a5e90" message="GET Orders by Account from Salesforce - Flow started" />
+        <set-variable value="#[attributes.queryParams.AccountID]" doc:name="Set AccountID Variable" doc:id="8cec983e-c961-4a0e-b0d0-55dff9280496" variableName="accountId" />
+        <choice doc:name="Choice" doc:id="8d3fb363-4e97-4e97-acd3-72dcf40d88e9">
+            <when expression="#[isEmpty(vars.accountId) and !isEmpty(attributes.queryParams.LoyaltyMemberID)]">
+                <logger level="INFO" doc:name="Logger" doc:id="85f2bc47-2c52-4093-8dbe-9846311e0432" message="Finding Account by LoyaltyMemberID: #[attributes.queryParams.LoyaltyMemberID]" />
+                <salesforce:query doc:name="Query Account by LoyaltyMemberID" doc:id="dfb683cf-827b-4288-96fa-cd02b388b630" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT AccountId FROM LoyaltyMember WHERE Id = ':loyaltyMemberId'</salesforce:salesforce-query>
+                    <salesforce:parameters>
+                        <![CDATA[#[{ loyaltyMemberId: attributes.queryParams.LoyaltyMemberID }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <set-variable value="#[if(!isEmpty(payload)) payload[0].AccountId else null]" doc:name="Set AccountID from LoyaltyMemberID" doc:id="468498d7-1aa0-4402-8232-c1eebe95ec5a" variableName="accountId" />
+            </when>
+            <when expression="#[isEmpty(vars.accountId) and !isEmpty(attributes.queryParams.ContactID)]">
+                <logger level="INFO" doc:name="Logger" doc:id="11851446-9989-4b64-92a7-c9e1ab74ccad" message="Finding Account by ContactID: #[attributes.queryParams.ContactID]" />
+                <salesforce:query doc:name="Query Account by ContactID" doc:id="e72c66d3-ac1c-4865-93f5-74f1dd5d2820" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT AccountId FROM Contact WHERE Id = ':contactId'</salesforce:salesforce-query>
+                    <salesforce:parameters>
+                        <![CDATA[#[{ contactId: attributes.queryParams.ContactID }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <set-variable value="#[if(!isEmpty(payload)) payload[0].AccountId else null]" doc:name="Set AccountID from ContactID" doc:id="8ce21de1-0439-49d3-b54e-fd642144d8a7" variableName="accountId" />
+            </when>
+            <when expression="#[isEmpty(vars.accountId) and !isEmpty(attributes.queryParams.email)]">
+                <logger level="INFO" doc:name="Logger" doc:id="4237b993-a1af-4f07-9488-5862a5d46488" message="Finding Account by Email: #[attributes.queryParams.email]" />
+                <!-- First try to find by Account email -->
+                <salesforce:query doc:name="Query Account by Email" doc:id="d02724a3-e97e-4f73-b3ce-4ebbdee7bd94" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT Id FROM Account WHERE PersonEmail = ':email' OR BillingEmail = ':email' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters>
+                        <![CDATA[#[{ email: attributes.queryParams.email }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <choice doc:name="Check Account Email Result" doc:id="592d0d31-46b0-4849-aced-f25b827d5d43">
+                    <when expression="#[!isEmpty(payload)]">
+                        <set-variable value="#[payload[0].Id]" doc:name="Set AccountID from Account Email" doc:id="7911b078-c682-4c5e-a242-7b2337f0ad32" variableName="accountId" />
+                    </when>
+                    <otherwise>
+                        <!-- Try to find by Contact email -->
+                        <salesforce:query doc:name="Query Contact by Email" doc:id="246741d5-e321-4689-b379-5c951cb18da3" config-ref="Salesforce_Config">
+                            <salesforce:salesforce-query>SELECT AccountId FROM Contact WHERE Email = ':email' LIMIT 1</salesforce:salesforce-query>
+                            <salesforce:parameters>
+                                <![CDATA[#[{ email: attributes.queryParams.email }]]]>
+                            </salesforce:parameters>
+                        </salesforce:query>
+                        <set-variable value="#[if(!isEmpty(payload)) payload[0].AccountId else null]" doc:name="Set AccountID from Contact Email" doc:id="6f77975e-0e89-464c-a6dc-90455d1f86c2" variableName="accountId" />
+                    </otherwise>
+                </choice>
+            </when>
+            <when expression="#[isEmpty(vars.accountId) and !isEmpty(attributes.queryParams.loyaltyNumber)]">
+                <logger level="INFO" doc:name="Logger" doc:id="dca3c207-83ea-4f54-8fe1-3b167fdbd63e" message="Finding Account by Loyalty Number: #[attributes.queryParams.loyaltyNumber]" />
+                <!-- First try to find by Account loyalty number -->
+                <salesforce:query doc:name="Query Account by Loyalty Number" doc:id="190731e9-85dd-40a6-834e-ac7ed60da938" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT Id FROM Account WHERE LoyaltyNumber__c = ':loyaltyNumber' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters>
+                        <![CDATA[#[{ loyaltyNumber: attributes.queryParams.loyaltyNumber }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <choice doc:name="Check Account Loyalty Result" doc:id="bd17423a-d998-4c98-8cff-83e93fe32227">
+                    <when expression="#[!isEmpty(payload)]">
+                        <set-variable value="#[payload[0].Id]" doc:name="Set AccountID from Account Loyalty" doc:id="f2a3e7a0-523d-4f53-8c35-ce309d047168" variableName="accountId" />
+                    </when>
+                    <otherwise>
+                        <!-- Try to find by Contact loyalty number -->
+                        <salesforce:query doc:name="Query Contact by Loyalty Number" doc:id="9d6da8c3-468b-454b-9312-5bb8cd0c14d1" config-ref="Salesforce_Config">
+                            <salesforce:salesforce-query>SELECT AccountId FROM Contact WHERE LoyaltyNumber__c = ':loyaltyNumber' LIMIT 1</salesforce:salesforce-query>
+                            <salesforce:parameters>
+                                <![CDATA[#[{ loyaltyNumber: attributes.queryParams.loyaltyNumber }]]]>
+                            </salesforce:parameters>
+                        </salesforce:query>
+                        <set-variable value="#[if(!isEmpty(payload)) payload[0].AccountId else null]" doc:name="Set AccountID from Contact Loyalty" doc:id="56d25133-bd6f-4bb2-92a4-1b65c1dc4314" variableName="accountId" />
+                    </otherwise>
+                </choice>
+            </when>
+            <when expression="#[isEmpty(vars.accountId) and !isEmpty(attributes.queryParams.name)]">
+                <logger level="INFO" doc:name="Logger" doc:id="dd93b2f4-965b-471c-ae92-5fb96b18f42e" message="Finding Account by Name: #[attributes.queryParams.name]" />
+                <!-- First try to find by Account name -->
+                <salesforce:query doc:name="Query Account by Name" doc:id="3a6f7399-8cb5-4466-978e-fa70c32ea913" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT Id FROM Account WHERE Name LIKE '%:name%' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters>
+                        <![CDATA[#[{ name: attributes.queryParams.name }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <choice doc:name="Check Account Name Result" doc:id="c421be43-8e6c-4b51-affe-19c9065c9846">
+                    <when expression="#[!isEmpty(payload)]">
+                        <set-variable value="#[payload[0].Id]" doc:name="Set AccountID from Account Name" doc:id="53bb4a29-72a6-4e44-a057-e128615cffc1" variableName="accountId" />
+                    </when>
+                    <otherwise>
+                        <!-- Try to find by Contact name -->
+                        <salesforce:query doc:name="Query Contact by Name" doc:id="e0fb7685-f36e-477f-8559-8aa9ce48c877" config-ref="Salesforce_Config">
+                            <salesforce:salesforce-query>SELECT AccountId FROM Contact WHERE Name LIKE '%:name%' OR FirstName LIKE '%:name%' OR LastName LIKE '%:name%' LIMIT 1</salesforce:salesforce-query>
+                            <salesforce:parameters>
+                                <![CDATA[#[{ name: attributes.queryParams.name }]]]>
+                            </salesforce:parameters>
+                        </salesforce:query>
+                        <set-variable value="#[if(!isEmpty(payload)) payload[0].AccountId else null]" doc:name="Set AccountID from Contact Name" doc:id="41985a44-1a43-453f-90bb-95316766aac2" variableName="accountId" />
+                    </otherwise>
+                </choice>
+            </when>
+        </choice>
+        <choice doc:name="Validate AccountID" doc:id="4ddda5a1-fa2b-4a08-b448-db450f0eb66c">
+            <when expression="#[!isEmpty(vars.accountId)]">
+                <logger level="INFO" doc:name="Logger" doc:id="3f4cabb8-ee69-4fee-803f-e79ea1c99fd8" message="Querying orders for AccountID: #[vars.accountId]" />
+                <salesforce:query doc:name="Query Orders and Order Items by AccountID" doc:id="307a0062-f51e-47c2-abed-7081ce094373" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query><![CDATA[SELECT Id, Name, OrderNumber,OrderReferenceNumber, Description, TotalAmount, Type, Status, CreatedDate, 
+Account.Id, Account.Name, Account.PersonEmail, Account.PersonMobilePhone, Account.BillingAddress,
+(SELECT Id, OrderItemNumber, 
+Product2.Id, Product2.Name, Product2.External_ID__c, Product2.StockKeepingUnit, Product2.ProductCode, Product2.Family, Product2.DisplayUrl, Product2.Description, Product2.AvailabilityDate,
+Quantity, UnitPrice, TotalPrice FROM OrderItems) 
+FROM Order
+
+WHERE AccountId = ':accountId']]></salesforce:salesforce-query>
+                    <salesforce:parameters><![CDATA[#[{ accountId: vars.accountId }]]]>
+                    </salesforce:parameters>
+                </salesforce:query>
+                <ee:transform doc:name="Transform Salesforce Response" doc:id="2b2aa387-d66f-4912-b806-ee4a19f618c5">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map (order, index) -> {
+    id: order.Id,
+    order_number_sf: order.OrderNumber,
+    order_number: order.OrderReferenceNumber,
+    description: order.Description,
+    customer: {
+    	name: order.Account.Name,
+    	id: order.Account.Id, 
+    	email: order.Account.PersonEmail,
+    	billing_address: (if (isEmpty(order.Account.BillingAddress)) order.Account.BillingAddress - "longitude" - "latitude" -"geocodeAccuracy" - "stateCode" - "countryCode" else null),
+    	phone: order.Account.PersonMobilePhone
+    },
+    status: order.Status,
+    total_amount: order.TotalAmount,
+    created_date: order.CreatedDate,
+    order_items: order.OrderItems default [] map (item, itemIndex) -> {
+        id: item.Id,
+        order_item_number: item.OrderItemNumber,
+        quantity: item.Quantity,
+        unit_price: item.UnitPrice,
+        total_price: item.TotalPrice,
+        product: (item.Product2 )
+    }
+}]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <ee:transform doc:name="Error Response" doc:id="a6b357c7-d567-41e5-93b4-48e241f3164e">
+                    <ee:message>
+                        <ee:set-payload>
+                            <![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Account identifier is required. Please provide one of the following query parameters: AccountID, ContactID, LoyaltyMemberID, email, loyaltyNumber, or name.",
+    "message": "No valid identifier provided to find the Account"
+}]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+
+    <flow name="get-orders-by-customer-database" doc:id="4893726b-7dd5-4d2b-bdee-9126065e7066">
+        <http:listener doc:name="GET /orders/database/customer" doc:id="17491bae-e4b8-43e7-b860-1dbfbdc78219" config-ref="HTTP_Listener_config" path="/orders/database/customer" />
+        <logger level="INFO" doc:name="Logger" doc:id="4c1d7dcd-4c99-4401-ac1a-be336951951d" message="GET Orders by Customer from Database - Flow started" />
+        <set-variable value="#[attributes.queryParams.customerId]" doc:name="Set Customer ID Variable" doc:id="1892582a-5f2f-4745-a21b-79ada0ad1712" variableName="customerId" />
+        <choice doc:name="Validate Customer ID" doc:id="1715b61d-a7eb-4482-9e5f-c792aed46326">
+            <when expression="#[!isEmpty(vars.customerId)]">
+                <logger level="INFO" doc:name="Logger" doc:id="36562fbe-06fc-4941-9e7a-47d9a7481827" message="Querying orders for Customer ID: #[vars.customerId]" />
+                <db:select doc:name="Query Orders with Items by Customer" doc:id="38afa949-3920-456d-b6ef-fe91b0f695b9" config-ref="Database_Config">
+                    <db:sql>
+                        <![CDATA[SELECT 
+    o.id as order_id,
+    o.sf_id as order_sf_id,
+    o.order_number,
+    o.customer_id,
+    o.location_id,
+    o.order_date,
+    o.status,
+    o.origin,
+    o.subtotal,
+    o.discount_amount,
+    o.tax_amount,
+    o.total_amount,
+    o.voucher_id,
+    o.voucher_discount,
+    o.coupon_code,
+    o.coupon_discount,
+    o.payment_method,
+    o.transaction_id,
+    o.notes as order_notes,
+    o.created_by,
+    o.updated_at,
+    o.completed_at,
+    oi.id as item_id,
+    oi.sf_id as item_sf_id,
+    oi.product_id,
+    oi.product_name,
+    oi.product_sku,
+    oi.product_image_url,
+    oi.quantity,
+    oi.unit_price,
+    oi.tax_amount as item_tax_amount,
+    oi.discount_amount as item_discount_amount,
+    oi.voucher_discount as item_voucher_discount,
+    oi.total_price,
+    oi.notes as item_notes,
+    oi.created_at as item_created_at
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+WHERE o.customer_id = :customerId
+ORDER BY o.id, oi.id]]>
+                    </db:sql>
+                    <db:input-parameters>
+                        <![CDATA[#[{ customerId: vars.customerId as Number }]]]>
+                    </db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Transform to Orders with Items" doc:id="2f544c28-2ae7-433c-985a-f315ca5995d2">
+                    <ee:message>
+                        <ee:set-payload>
+                            <![CDATA[%dw 2.0
+output application/json
+---
+if (isEmpty(payload))
+    []
+else
+    (payload groupBy $.order_id) pluck (orderItems, orderId) -> {
+        id: orderItems[0].order_id,
+        sf_id: orderItems[0].order_sf_id,
+        order_number: orderItems[0].order_number,
+        customer_id: orderItems[0].customer_id,
+        location_id: orderItems[0].location_id,
+        order_date: orderItems[0].order_date,
+        status: orderItems[0].status,
+        origin: orderItems[0].origin,
+        subtotal: orderItems[0].subtotal,
+        discount_amount: orderItems[0].discount_amount,
+        tax_amount: orderItems[0].tax_amount,
+        total_amount: orderItems[0].total_amount,
+        voucher_id: orderItems[0].voucher_id,
+        voucher_discount: orderItems[0].voucher_discount,
+        coupon_code: orderItems[0].coupon_code,
+        coupon_discount: orderItems[0].coupon_discount,
+        payment_method: orderItems[0].payment_method,
+        transaction_id: orderItems[0].transaction_id,
+        notes: orderItems[0].order_notes,
+        created_by: orderItems[0].created_by,
+        updated_at: orderItems[0].updated_at,
+        completed_at: orderItems[0].completed_at,
+        order_items: orderItems filter ($.item_id != null) map (item, index) -> {
+            id: item.item_id,
+            sf_id: item.item_sf_id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            product_sku: item.product_sku,
+            product_image_url: item.product_image_url,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            tax_amount: item.item_tax_amount,
+            discount_amount: item.item_discount_amount,
+            voucher_discount: item.item_voucher_discount,
+            total_price: item.total_price,
+            notes: item.item_notes,
+            created_at: item.item_created_at
+        }
+    }]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <ee:transform doc:name="Error Response" doc:id="4f76374d-e555-4600-bdb6-a36d76f64e47">
+                    <ee:message>
+                        <ee:set-payload>
+                            <![CDATA[%dw 2.0
+output application/json
+---
+{
+    "error": "Customer ID is required. Please provide customerId as a query parameter.",
+    "message": "No customer ID provided to find orders"
+}]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+
+    <flow name="create-salesforce-orders-and-items" doc:id="34f89453-bca3-4c3b-bb57-b5d109de1534">
+        <http:listener doc:name="POST /orders/salesforce/create" doc:id="6b148d6a-5bc2-4b36-a7f0-3104f3314aca" config-ref="HTTP_Listener_config" path="/orders/salesforce/create" allowedMethods="POST" />
+        <logger level="INFO" doc:name="Logger" doc:id="dc021ecc-2f2b-4bca-8feb-f0f811faf04f" message="Create Salesforce Orders and Items - Flow started" />
+		<db:select doc:name="Select" doc:id="14019adc-d37b-48a6-8d3b-b0b05c9cfd22" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * 
+FROM orders
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.id
+}]]]></db:input-parameters>
+		</db:select>
+		<set-variable value='#[output application/java&#10;---&#10;payload[0]]' doc:name="Set Original Order Variable" doc:id="0b1334f3-4e49-4d1e-9fe7-2c42203e6c2e" variableName="originalOrder" />
+
+        <!-- Get order items from database -->
+        <flow-ref doc:name="Get AccountId" doc:id="06206b64-cb97-4c63-bfe9-257e3ecdca45" name="get-accountid-salesforce" target="accountId"/>
+		<db:select doc:name="Get Order Items" doc:id="6a5fe3fe-b6bc-4de4-b960-955c41fef060" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[SELECT 
+    oi.id as item_id,
+    oi.sf_id as item_sf_id,
+    oi.product_id,
+    oi.product_name,
+    oi.product_sku,
+    oi.quantity,
+    oi.unit_price,
+    oi.total_price,
+    p.sf_id as product_sf_id,
+    p.name as product_name_from_products,
+    p.price as product_price
+FROM order_items oi
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE oi.order_id = :orderId]]>
+            </db:sql>
+            <db:input-parameters>
+                <![CDATA[#[{ orderId: vars.originalOrder.id }]]]>
+            </db:input-parameters>
+        </db:select>
+
+        <set-variable value="#[payload]" doc:name="Set Order Items Variable" doc:id="9bd114e6-07a0-4f57-90df-369ce34576b8" variableName="orderItems" />
+
+        <!-- Process each product to ensure it exists in Salesforce -->
+        <foreach doc:name="For Each Order Item" doc:id="548c38a2-078c-49e1-94ef-20a388186453" collection="#[vars.orderItems]">
+            <choice doc:name="Check if Product has sf_id" doc:id="86399423-d6be-4662-8314-b8698edf4a9d">
+                <when expression="#[isEmpty(payload.product_sf_id)]">
+                    <logger level="INFO" doc:name="Logger" doc:id="103fbf67-90cb-49f5-a55c-b871935a7c2b" message="Product #[payload.product_id] does not have sf_id, creating in Salesforce" />
+                    <flow-ref doc:name="Create Product in Salesforce" doc:id="d40ed479-8b3f-44bf-8a14-e68c74dbfdcd" name="create-product-in-salesforce" />
+                </when>
+                <otherwise>
+                    <logger level="INFO" doc:name="Logger" doc:id="832e4a3d-0b21-482a-a86a-ca19a37ca322" message="Product #[payload.product_id] already has sf_id: #[payload.product_sf_id]" />
+                </otherwise>
+            </choice>
+        </foreach>
+
+        <!-- Refresh order items with updated sf_ids -->
+        <db:select doc:name="Refresh Order Items with sf_ids" doc:id="68ac750a-bac3-4fa7-ac76-6cab17ee74cd" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[SELECT 
+    oi.id as item_id,
+    oi.sf_id as item_sf_id,
+    oi.product_id,
+    oi.product_name,
+    oi.product_sku,
+    oi.quantity,
+    oi.unit_price,
+    oi.total_price,
+    p.sf_id as product_sf_id,
+    p.name as product_name_from_products,
+    p.price as product_price
+FROM order_items oi
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE oi.order_id = :orderId]]>
+            </db:sql>
+            <db:input-parameters>
+                <![CDATA[#[{ orderId: vars.originalOrder.id }]]]>
+            </db:input-parameters>
+        </db:select>
+
+        <set-variable value="#[payload]" doc:name="Update Order Items Variable" doc:id="f81d9f92-f355-4be0-b5f9-b0553d0cf997" variableName="orderItems" />
+
+        <!-- Create Order in Salesforce -->
+        <flow-ref doc:name="Get PriceBookId" doc:id="49994d02-0297-4102-b4dc-66e059acb380" name="get-and-activate-pricebook" target="priceBookId" />
+		<ee:transform doc:name="Transform to Salesforce Order" doc:id="e8fb705b-6b07-45c9-a152-754e98c57f8b">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+    AccountId: vars.accountId as String,
+    Status: "Draft",
+    EffectiveDate: now() as String {format: "yyyy-MM-dd"}  as Date,
+    Description: "Order created from POS order #" ++ vars.originalOrder.order_number,
+    Pricebook2Id: vars.priceBookId,
+    OrderReferenceNumber: vars.originalOrder.order_number
+}]]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <salesforce:create doc:name="Create Order in Salesforce" doc:id="973b5841-6e5c-4914-87f1-d32a85615ae1" config-ref="Salesforce_Config" type="Order" />
+
+        <validation:is-true doc:name="NOT Successful" doc:id="2e8b21ca-8d37-481c-9a33-b06a8e4c31c2" config-ref="Validation_Config" expression="#[output application/java --- payload.successful as Boolean]" message="Order not created  - Error: #[payload.items[0].exception.message]"/>
+		<set-variable value="#[payload.items[0].Id]" doc:name="Set Salesforce Order ID" doc:id="8b0b2443-01e6-4741-b1bd-4b9b2f44039e" variableName="salesforceOrderId" />
+
+        <!-- Update database order with sf_id -->
+        <db:update doc:name="Update Order sf_id" doc:id="43ad6ab7-628c-4d36-8769-6a4bb6f65492" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[UPDATE orders SET sf_id = :sfId WHERE id = :orderId]]>
+            </db:sql>
+            <db:input-parameters>
+                <![CDATA[#[{ sfId: vars.salesforceOrderId, orderId: vars.originalOrder.id }]]]>
+            </db:input-parameters>
+        </db:update>
+
+        <!-- Create Order Items in Salesforce -->
+        <set-variable value="#[(sizeOf(vars.orderItems) &gt; 0) as Boolean default false]" doc:name="Set hasItems" doc:id="059c69a4-328b-49eb-a526-a94c76823119" variableName="hasItems"/>
+		<logger level="INFO" doc:name="Logger" doc:id="1a480e5c-e866-4825-951b-7269a791a1db" message="Order has items? #[vars.hasItems] - Items = #[sizeOf(vars.orderItems)]"/>
+		<choice doc:name="Choice" doc:id="c5cb1330-87b1-4dde-a4f7-1156d26dac42" >
+			<when expression="#[vars.hasItems]">
+				<logger level="INFO" doc:name="Logger" doc:id="0f89299e-4a39-4be3-a85a-690bbdd48c04" message="About to create#[sizeOf(vars.orderItems)] OrderItems for Order - #[vars.originalOrder.order_number] ... "/>
+				<salesforce:query-all doc:name="Get All PriceBookEntries for PriceBook" doc:id="55b12ff0-41a9-42b4-9969-62d5e94d9c4e" config-ref="Salesforce_Config" target="priceBookEntries">
+			<salesforce:salesforce-query><![CDATA[select Id, Product2Id from PriceBookEntry 
+where PriceBook2Id = ':id']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[{
+	id: vars.priceBookId
+}]]]></salesforce:parameters>
+		</salesforce:query-all>
+				<ee:transform doc:name="Set all Salesforce Order Items" doc:id="23e02a53-5606-4d17-8907-740531746628">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+vars.orderItems map (item, index) -> {
+    OrderId: vars.salesforceOrderId,
+    Product2Id: item.product_sf_id,
+    Quantity: item.quantity,
+    UnitPrice: item.unit_price,
+    PriceBookEntryId: (vars.priceBookEntries filter $.Product2Id == item.product_sf_id)[0].Id
+}]]>
+                    </ee:set-payload>
+                </ee:message>
+            </ee:transform>
+				<salesforce:create doc:name="Create Order Item in Salesforce" doc:id="e8b27283-1e60-4727-8241-4dc2411c468e" config-ref="Salesforce_Config" type="OrderItem" />
+				<validation:is-true doc:name="NOT Successful" doc:id="cbafdbff-7cd1-4fa7-af97-6897658356e1" config-ref="Validation_Config" expression="#[output application/java --- payload.successful as Boolean]" message="Order Items not created  - Error: #[payload.items[0].exception.message]" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="7fc1a3d4-3d24-4a60-afa6-94df19f08e67" message="Order [ #[vars.originalOrder.order_number] ] with no items"/>
+			</otherwise>
+		</choice>
+
+        <ee:transform doc:name="Success Response" doc:id="6bb2ad51-b73f-42b7-8a58-6c3233391bbe">
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Order and Order Items created successfully in Salesforce",
+    salesforce_order_id: vars.salesforceOrderId,
+    database_order_id: vars.originalOrder.id,
+    order_items_count: sizeOf(vars.orderItems)
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <sub-flow name="get-accountid-salesforce" doc:id="227a812c-9541-40e9-8dbc-2ac0d94d50ee" >
+		<db:select doc:name="Get SF Loyalty Member ID" doc:id="9b5be1c1-665c-4fc8-9a94-14bbe542f60a" config-ref="Database_Config">
+			<db:sql ><![CDATA[select sf_id as memberId 
+from customers
+where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.originalOrder.customer_id
+}]]]></db:input-parameters>
+		</db:select>
+		<set-variable value="#[payload[0].memberid]" doc:name="Set Member ID" doc:id="58456439-16d1-4f67-becb-a04a4cbe15dd" variableName="memberId"/>
+		<salesforce:query doc:name="Get AccountId" doc:id="b5b29f30-01d6-43b2-b7e3-720eb2b57393" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Contact.AccountId 
+FROM LoyaltyProgramMember
+where Id = ':id']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[{
+	id: vars.memberId
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="7ac855ca-5b7d-4b92-a3ee-4050b27be400" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload[0].Contact.AccountId]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-and-activate-pricebook" doc:id="90bdefcc-85de-4369-b630-2aa334b3a584" >
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="791472d8-ff8a-4318-b9a0-7fb5c32c9cd6" millisBetweenRetries="1" >
+			<salesforce:query doc:name="Query" doc:id="6dd2f62c-9e20-4fe6-9882-0b7696758d04" config-ref="Salesforce_Config" >
+				<salesforce:salesforce-query ><![CDATA[SELECT Id, IsActive
+FROM Pricebook2
+WHERE IsStandard = true
+]]></salesforce:salesforce-query>
+			</salesforce:query>
+			<choice doc:name="Choice" doc:id="3b4fc4e5-7cc2-4878-8d2b-de801570d658" >
+				<when expression="#[isEmpty(payload[0]) or (!(payload[0].IsActive default false))]" >
+					<logger level="INFO" doc:name="Logger" doc:id="b41875ab-b2bc-4fe0-8952-f7afb93778fb" message="Activating Price Book ID = #[payload[0].Id]" />
+					<ee:transform doc:name="Transform Message" doc:id="02062268-f1eb-478f-9a54-22211948137d" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	Id: payload01.Id,
+	IsActive: true
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<salesforce:update type="Pricebook2" doc:name="Activate Price Book" doc:id="d65969b4-6c8c-4327-8c73-d161fc909ce5" config-ref="Salesforce_Config" />
+					<raise-error doc:name="Raise error" doc:id="9e4d757d-792c-4927-a1f9-e56ada9ac45b" type="MULE:CONNECTIVITY" description="Service not done yet" />
+				</when>
+				<otherwise >
+					<set-variable value="#[payload[0].Id]" doc:name="Save Pricebook Id" doc:id="6380c0c1-09ef-40b9-9c4b-59d5169a3c6c" variableName="pricebookId" />
+					<ee:transform doc:name="Transform Message" doc:id="cc53f806-b9ac-49fa-86a6-8a5d7b2b7361" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload[0].Id]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</otherwise>
+			</choice>
+		</until-successful>
+	</sub-flow>
+	<flow name="create-product-in-salesforce" doc:id="3a47fdc8-8417-4084-a706-8ab1a9344058">
+        <logger level="INFO" doc:name="Logger" doc:id="d2e42fc2-80e2-4cbb-a348-9ca5c3b15bb9" message="Create Product in Salesforce - Flow started for product ID: #[payload.product_id]" />
+
+        <!-- Get product details from database -->
+        <db:select doc:name="Get Product Details" doc:id="37a94432-41bc-43a5-a24b-4c73b4564b33" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[SELECT * FROM products WHERE id = :productId]]>
+            </db:sql>
+            <db:input-parameters>
+                <![CDATA[#[{ productId: payload.product_id }]]]>
+            </db:input-parameters>
+        </db:select>
+
+        <set-variable value="#[payload[0]]" doc:name="Set Product Variable" doc:id="c50fae0d-8e7f-40b2-bf4f-e94a7cdfa6b1" variableName="product" />
+
+        <!-- Create Product2 in Salesforce -->
+        <ee:transform doc:name="Transform to Salesforce Product" doc:id="d99bdf50-ba9c-4b0c-a8ba-055c5086dce8">
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[%dw 2.0
+output application/java
+---
+{
+    Name: vars.product.name,
+    ProductCode: vars.product.sku,
+    Description: vars.product.description default "",
+    IsActive: true,
+    Family: vars.product.category default "General"
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <salesforce:create doc:name="Create Product in Salesforce" doc:id="6716a653-4b01-40b9-9388-4f1a73eb14bc" config-ref="Salesforce_Config" type="Product2" />
+
+        <set-variable value="#[payload[0].Id]" doc:name="Set Product sf_id" doc:id="362fbc89-0135-45ff-aaf4-30ea6a59f9fc" variableName="productSfId" />
+
+        <!-- Update database product with sf_id -->
+        <db:update doc:name="Update Product sf_id" doc:id="b9489193-e2dd-4e08-b976-4277b5290e2d" config-ref="Database_Config">
+            <db:sql>
+                <![CDATA[UPDATE products SET sf_id = :sfId WHERE id = :productId]]>
+            </db:sql>
+            <db:input-parameters>
+                <![CDATA[#[{ sfId: vars.productSfId, productId: vars.product.id }]]]>
+            </db:input-parameters>
+        </db:update>
+
+        <!-- Check if price exists in standard pricebook -->
+        <salesforce:query doc:name="Check Standard Pricebook Entry" doc:id="565983d6-d223-4cb6-9024-73abf9dafefd" config-ref="Salesforce_Config">
+            <salesforce:salesforce-query>SELECT Id FROM PricebookEntry WHERE Product2Id = ':productId' AND Pricebook2.IsStandard = true</salesforce:salesforce-query>
+            <salesforce:parameters>
+                <![CDATA[#[{ productId: vars.productSfId }]]]>
+            </salesforce:parameters>
+        </salesforce:query>
+
+        <choice doc:name="Check if Pricebook Entry Exists" doc:id="2b2d97e0-e295-4546-b76c-99ef2bc0391e">
+            <when expression="#[isEmpty(payload)]">
+                <logger level="INFO" doc:name="Logger" doc:id="aeeee23b-097c-492d-beb5-d94debf0dc33" message="No pricebook entry found, creating standard pricebook entry" />
+
+                <!-- Get Standard Pricebook ID -->
+                <salesforce:query doc:name="Get Standard Pricebook" doc:id="d41b98f8-fcc0-4e24-9f2f-adcecf667581" config-ref="Salesforce_Config">
+                    <salesforce:salesforce-query>SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1</salesforce:salesforce-query>
+                </salesforce:query>
+
+                <set-variable value="#[payload[0].Id]" doc:name="Set Standard Pricebook ID" doc:id="cbd9af14-7563-409b-93f7-4fec56f76627" variableName="standardPricebookId" />
+
+                <!-- Create Standard Pricebook Entry -->
+                <ee:transform doc:name="Transform to Pricebook Entry" doc:id="4a8c1c19-84ac-435b-ab83-1c51cbb96d42">
+                    <ee:message>
+                        <ee:set-payload>
+                            <![CDATA[%dw 2.0
+output application/java
+---
+{
+    Pricebook2Id: vars.standardPricebookId,
+    Product2Id: vars.productSfId,
+    UnitPrice: vars.product.price,
+    IsActive: true
+}]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+
+                <salesforce:create doc:name="Create Pricebook Entry" doc:id="1bd5a047-478c-4abc-b8a9-dc261d271587" config-ref="Salesforce_Config" type="PricebookEntry" />
+
+                <logger level="INFO" doc:name="Logger" doc:id="03bd6ba8-3d65-48ef-9cfb-25bbceb4766e" message="Standard pricebook entry created successfully" />
+            </when>
+            <otherwise>
+                <logger level="INFO" doc:name="Logger" doc:id="7e87f364-4710-409e-9ade-8026dcf57947" message="Pricebook entry already exists" />
+            </otherwise>
+        </choice>
+
+        <ee:transform doc:name="Product Creation Response" doc:id="31176387-f76d-4444-b631-a6601ea11809">
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    message: "Product created successfully in Salesforce",
+    product_id: vars.product.id,
+    salesforce_product_id: vars.productSfId,
+    product_name: vars.product.name
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>

@@ -33,6 +33,12 @@ Important:
 	 product_type, collection, description, short_description.
 - Do not skip any fields on the example bellow
 
+Very important:
+Do not return any other text that is not in the json, specially do not add any comments before or after the json
+No text like I'll create a brand called "xyz" in the "xyz" segment. 
+And never but never, "Here's a JSON array with two products:"
+ONLY THE JSON!!!
+
 Return it in the format of the following example:
 
 {

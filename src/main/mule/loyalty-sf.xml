@@ -73,7 +73,7 @@ payload[0]]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="loyalty-get-programs" doc:id="d29cf482-79d9-4d98-8b95-23cc58c58dce" >
-		<http:listener doc:name="Listener" doc:id="27c63114-7a3a-4cc6-aae3-bc3d0102ad68" config-ref="HTTP_Listener_config" path="/programs" />
+		<http:listener doc:name="GET /programs" doc:id="27c63114-7a3a-4cc6-aae3-bc3d0102ad68" config-ref="HTTP_Listener_config" path="/programs" />
 		<salesforce:query-all doc:name="Query all" doc:id="2a5d3f87-003c-420f-906d-eaed7be47f41" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[select id, name from loyaltyprogram]]></salesforce:salesforce-query>
 		</salesforce:query-all>
@@ -87,10 +87,32 @@ payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="loyalty-get-all-journaltypes" doc:id="bc6bcf20-d0b8-4afb-b1e5-aae75e71d193" >
-		<http:listener doc:name="Listener" doc:id="f28163a0-9aa8-4930-9df7-0b6cce7f1536" config-ref="HTTP_Listener_config" path="/journaltypes" />
-		<salesforce:query-all doc:name="Query all" doc:id="e8eb7b62-20d3-44d9-81a4-94775a669558" config-ref="Salesforce_Config" >
+		<http:listener doc:name="GET /journaltypes" doc:id="f28163a0-9aa8-4930-9df7-0b6cce7f1536" config-ref="HTTP_Listener_config" path="/journaltypes" />
+		<salesforce:query doc:name="Query all" doc:id="e8eb7b62-20d3-44d9-81a4-94775a669558" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[select id, name, journaltype.id, journaltype.name, journaltype.description, description from journalsubtype]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
+		<set-variable value='#[%dw 2.0&#10;output application/java&#10;&#10;var accrualJournalType = payload filter ($.JournalType.Name == "Accrual")&#10;var hasPurchaseSubType = accrualJournalType[0].JournalSubTypes filter ($.Name == "Purchase")&#10;---&#10;if (!isEmpty(accrualJournalType))&#10;    if (!isEmpty(hasPurchaseSubType))&#10;        {&#10;            exists: true,&#10;            journalTypeId: accrualJournalType[0].JournalType.Id,&#10;            journalSubTypeId: hasPurchaseSubType[0].Id&#10;        }&#10;    else&#10;        {&#10;            exists: false,&#10;            journalTypeId: accrualJournalType[0].JournalType.Id,&#10;            message: "Accrual JournalType exists but Purchase JournalSubType not found"&#10;        }&#10;else&#10;    {&#10;        exists: false,&#10;        journalTypeId: null,&#10;        message: "Accrual JournalType not found"&#10;    }]' doc:name="Check if JournallSubtype Accrual exists" doc:id="6260c671-d560-466b-aabe-59d51703baeb" variableName="jtExists" />
+		<choice doc:name="Choice" doc:id="e7dafc32-a4c9-4f97-8bfa-72ce997c19c3">
+			<when expression="#[!vars.jtExists.exists]">
+				<logger level="INFO" doc:name="Logger" doc:id="73b7f439-bc55-4ffc-99f5-d26c0d236d6e" message="Purchase SubType doesn't exists, adding it to Accrual #[vars.jtExists]" />
+				<ee:transform doc:name="Transform Message" doc:id="caedb02a-763e-4480-a015-836d7affc5fd">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	JournalTypeId: vars.jtExists.journalTypeId,
+	Name: 'Purchase'
+}]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<salesforce:create doc:name="Create Purchase JournalySubtye" doc:id="bc93623c-716d-4e1a-8ab0-9d03e82346f3" config-ref="Salesforce_Config" type="JournalSubType" />
+				<logger level="INFO" doc:name="Logger" doc:id="78ec763d-404f-46a4-a1b8-b61a18d65e9d" message="Subtype Created: #[payload]" />
+				<salesforce:query doc:name="Query all" doc:id="64326ca3-cfd3-4767-bbf5-b6e03cc8f71c" config-ref="Salesforce_Config" >
+					<salesforce:salesforce-query ><![CDATA[select id, name, journaltype.id, journaltype.name, journaltype.description, description from journalsubtype]]></salesforce:salesforce-query>
+				</salesforce:query>
+			</when>
+		</choice>
 		<ee:transform doc:name="Transform Message" doc:id="e29f7bfc-3ded-4646-a5e6-442cd2611575" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -117,7 +139,7 @@ grouped
 		</ee:transform>
 	</flow>
 	<flow name="loyalty-get-wo" doc:id="77674573-833e-44f9-aaa3-d884f87890e4" >
-		<http:listener doc:name="Listener" doc:id="7996b7c5-afe3-4f18-9dec-476780fbfc19" config-ref="HTTP_Listener_config" path="/wo" />
+		<http:listener doc:name="GET /wo" doc:id="7996b7c5-afe3-4f18-9dec-476780fbfc19" config-ref="HTTP_Listener_config" path="/wo" />
 		<salesforce:query-all doc:name="Query all" doc:id="29d70a1c-bc91-4412-8e88-200d3f606a92" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT Amount__c,ContactId, Contact.name, Contact.email, Contact.phone , 
 Description, Discount, EndDate, External_ID__c,GrandTotal, Status, Subject, Subtotal, Tax, Work_End__c, 
@@ -137,7 +159,7 @@ payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="loyalty-get-member-tiers" doc:id="44ce114d-beaf-4438-b3e7-22ef25e9a063" >
-		<http:listener doc:name="Listener" doc:id="4eb3d331-06b6-4cb7-9f6c-92c0fa4c78c4" config-ref="HTTP_Listener_config" path="/members/tiers" />
+		<http:listener doc:name="GET /members/tiers" doc:id="4eb3d331-06b6-4cb7-9f6c-92c0fa4c78c4" config-ref="HTTP_Listener_config" path="/members/tiers" />
 		<salesforce:query-all doc:name="Query all" doc:id="cd1b0065-8e13-4224-b7f3-0481c08e1a7e" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT LoyaltyMemberId, id, Name, External_ID__c, TierMemberIdentifier
 From LoyaltyMemberTier 
@@ -153,7 +175,7 @@ payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="loyalty-get-member-transactions" doc:id="a0db846f-79f1-427a-9d8c-2298acec8c07" >
-		<http:listener doc:name="Listener" doc:id="868d890e-57e7-493b-8756-a335ea61c7c1" config-ref="HTTP_Listener_config" path="/members/transactions/{id}" />
+		<http:listener doc:name="GET /members/transactions/{id}" doc:id="868d890e-57e7-493b-8756-a335ea61c7c1" config-ref="HTTP_Listener_config" path="/members/transactions/{id}" />
 		<salesforce:query-all doc:name="Query Transactions by Member Id" doc:id="0d6c6124-645a-4c58-aa40-4e11f0c69dc6" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT MemberId, LoyaltyProgramId, LoyaltyProgram.Name, JournalTypeId, JournalType.Name, JournalSubTypeId, JournalSubType.Name, JournalReason, JournalDate, EscrowPointsCreditDate, Channel, Comment,
 ProductId , Product.Name, ProductCategoryId , ProductCategory.Name, Brand, Points_to_Redeem__c , PaymentMethod , ActivityDate, Status, Reward_Catalog__c, Quantity, QuantityUnitOfMeasureId, Establishment
@@ -359,7 +381,7 @@ where sf_id = :sf_id]]></db:sql>
 		<logger level="INFO" doc:name="Logger" doc:id="4498ee76-9bf3-47be-812e-9ae4a5440824" message="#[vars.response]" />
 	</sub-flow>
 	<flow name="loyalty-get-member-vouchers" doc:id="c300c99a-1dab-4477-abbf-8e3fbb6fb621" initialState="started">
-		<http:listener doc:name="Listener" doc:id="399fb43a-9fce-4f26-964c-bf73e2b5b967" config-ref="HTTP_Listener_config" path="/members/vouchers" allowedMethods="GET"/>
+		<http:listener doc:name="GET /members/vouchers" doc:id="399fb43a-9fce-4f26-964c-bf73e2b5b967" config-ref="HTTP_Listener_config" path="/members/vouchers" allowedMethods="GET"/>
 		<set-variable value="#[attributes.queryParams.member as Number]" doc:name="Set member" doc:id="fe051d97-457c-49aa-b284-b85f766c08e8" variableName="member"/>
 		<flow-ref doc:name="Get Member Vouchers" doc:id="ab1ee291-6e50-4c5c-968e-63b106ea36ca" name="get-member-vouchers"/>
 		<ee:transform doc:name="Transform Message" doc:id="0d9a315c-9809-4efc-ad53-33492620eb4a" >
