@@ -697,17 +697,16 @@ payload[0].Id]]></ee:set-payload>
         <!-- Create Product2 in Salesforce -->
         <ee:transform doc:name="Transform to Salesforce Product" doc:id="d99bdf50-ba9c-4b0c-a8ba-055c5086dce8">
             <ee:message>
-                <ee:set-payload>
-                    <![CDATA[%dw 2.0
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
-{
+[{
     Name: vars.product.name,
     ProductCode: vars.product.sku,
     Description: vars.product.description default "",
     IsActive: true,
     Family: vars.product.category default "General"
-}]]>
+}]]]>
                 </ee:set-payload>
             </ee:message>
         </ee:transform>

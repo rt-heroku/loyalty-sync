@@ -1450,14 +1450,24 @@ where id = :id]]></db:sql>
 	</flow>
 	<flow name="send-vouchers-to-salesforce" doc:id="b4f4bf3c-f111-4401-a053-5c7cee244bce" >
 		<http:listener doc:name="POST /members/vouchers/send" doc:id="6c5d831d-ca84-4f30-82da-6a48f3091f27" config-ref="HTTP_Listener_config" path="/members/vouchers/send"/>
-		<db:query-single doc:name="Query single" doc:id="c4ff253c-e58c-4813-bb12-acd3fdff8334" config-ref="Database_Config">
-			<db:sql ><![CDATA[select * from 
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="d7109864-7191-44b0-9b81-be5387de370c" millisBetweenRetries="2000">
+			<db:query-single doc:name="Query single" doc:id="c4ff253c-e58c-4813-bb12-acd3fdff8334" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from 
 customer_vouchers
 where id = :id]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{
+			<db:input-parameters><![CDATA[#[{
 	id:attributes.queryParams.id
 }]]]></db:input-parameters>
 		</db:query-single>
+			<choice doc:name="Choice" doc:id="a39255ca-db01-4269-9a07-93b9d8435a60">
+			<when expression='#[payload.status != "Redeemed"]'>
+					<raise-error doc:name="Raise error" doc:id="5c00352f-59ed-4797-9c10-3872bd4da336" type="MULE:CONNECTIVITY" description="Waiting for trigger to update the status of the Voucher, current status= #[payload.status]" />
+				</when>
+				<otherwise>
+					<logger level="INFO" doc:name="Logger" doc:id="a4eafe19-76f3-4923-8daf-90f93aa16994" />
+				</otherwise>
+		</choice>
+		</until-successful>
 		<logger level="INFO" doc:name="Logger" doc:id="f2649a33-f82e-4208-ad62-a2fcbb8c7273" message="Entering on modified voucher"/>
 		<choice doc:name="Choice" doc:id="928179c0-fc9c-425b-b269-aa4618f70de0" >
 			<when expression='#[payload.status == "Redeemed" and !isEmpty(payload.use_date)]'>

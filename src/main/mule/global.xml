@@ -55,7 +55,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		<file:connection workingDir="/Users/rodrigo.torres/mulesoft-work/mac-chain/files" />
 	</file:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="0eb8e850-8f74-4eeb-96d8-f87023b3e89f" file="config/config-base.yaml" />
-	<global-property doc:name="Global Property" doc:id="63c01cfd-c853-449d-9956-3a49d6ae08e3" name="env" value="prod" />
+	<global-property doc:name="Global Property" doc:id="63c01cfd-c853-449d-9956-3a49d6ae08e3" name="env" value="local2" />
 	<configuration-properties
 		doc:name="configuration-properties-env"
 		doc:id="e3a78ddd-3d50-40ac-905a-93975ae600a2"
