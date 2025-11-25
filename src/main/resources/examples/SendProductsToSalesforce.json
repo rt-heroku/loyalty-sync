@@ -1,0 +1,26 @@
+{
+  "products": [
+    {
+      "id": 123,
+      "name": "Product Name",
+      "sku": "SKU-001",
+      "price": 99.99,
+      "category": "Category",
+      "product_type": "Type",
+      "brand": "Brand Name",
+      "collection": "Collection",
+      "material": "Material",
+      "color": "Color",
+      "description": "Description",
+      "dimensions": "10x10x10",
+      "weight": 5.5,
+      "warranty_info": "1 year",
+      "care_instructions": "Care info",
+      "main_image_url": "https://...",
+      "is_active": true,
+      "featured": false,
+      "stock": 50
+    }
+  ],
+  "syncType": "single_product" 
+}

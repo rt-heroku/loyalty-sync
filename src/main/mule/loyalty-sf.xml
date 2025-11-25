@@ -9,7 +9,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
 	<flow name="loyalty-get-by-contact" doc:id="311a72ae-5bba-4078-9e60-2bb3af2f598a" >
 		<http:listener doc:name="Listener" doc:id="89681338-1d12-43bd-9a6f-2c9d557a3ac6" config-ref="HTTP_Listener_config" path="/cases" />
-		<salesforce:query-all doc:name="Query all" doc:id="c559a6a8-31c6-4d6b-a8bf-1c41d57e2dbf" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query all" doc:id="c559a6a8-31c6-4d6b-a8bf-1c41d57e2dbf" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT Amount__c,ContactId, Contact.name, Contact.email, Contact.phone , 
 Description, Discount, EndDate, External_ID__c,GrandTotal, Status, Subject, Subtotal, Tax, Work_End__c, 
 WorkOrderNumber, Work_Order_Type__c, Work_Start__c, 
@@ -17,7 +17,7 @@ WorkTypeId, WorkType.Description, WorkType.DurationType, WorkType.Type__c, WorkT
 WorkType.ProductId, WorkType.Product.Description
 FROM WorkOrder
 ]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="cb8342ea-488b-4213-a0d1-69de49f290a9" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -50,7 +50,7 @@ payload[0]]]></ee:set-payload>
 	</flow>
 	<flow name="loyalty-get-points" doc:id="eb5853b3-e3d0-4e4b-ba79-a4d10aaca7e1" >
 		<http:listener doc:name="Listener" doc:id="c89565bf-3300-43ac-abe7-238f89723eb9" config-ref="HTTP_Listener_config" path="/members/points/{id}" />
-		<salesforce:query-all doc:name="Query Points by Member Id" doc:id="71dc19cb-ea19-4d9b-88d5-06438740daf9" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query Points by Member Id" doc:id="71dc19cb-ea19-4d9b-88d5-06438740daf9" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT LoyaltyMemberId, sum(PointsBalance) PointsBalance, sum(EscrowPointsBalance) EscrowPointsBalance , sum(ExpirablePoints) ExpirablePoints, 
 sum(TotalPointsAccrued) TotalPointsAccrued, sum(TotalPointsExpired) TotalPointsExpired, sum(TotalPointsRedeemed) TotalPointsRedeemed
 FROM LoyaltyMemberCurrency
@@ -62,7 +62,7 @@ group by LoyaltyMemberId
 {
 	"id" : attributes.uriParams.id
 }]]]></salesforce:parameters>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="e4620546-590d-49a6-9231-8222c8e58dd2" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -74,9 +74,9 @@ payload[0]]]></ee:set-payload>
 	</flow>
 	<flow name="loyalty-get-programs" doc:id="d29cf482-79d9-4d98-8b95-23cc58c58dce" >
 		<http:listener doc:name="GET /programs" doc:id="27c63114-7a3a-4cc6-aae3-bc3d0102ad68" config-ref="HTTP_Listener_config" path="/programs" />
-		<salesforce:query-all doc:name="Query all" doc:id="2a5d3f87-003c-420f-906d-eaed7be47f41" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query all" doc:id="2a5d3f87-003c-420f-906d-eaed7be47f41" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[select id, name from loyaltyprogram]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="96f221b2-b2e5-4df2-b585-27400d2b5f89" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -140,7 +140,7 @@ grouped
 	</flow>
 	<flow name="loyalty-get-wo" doc:id="77674573-833e-44f9-aaa3-d884f87890e4" >
 		<http:listener doc:name="GET /wo" doc:id="7996b7c5-afe3-4f18-9dec-476780fbfc19" config-ref="HTTP_Listener_config" path="/wo" />
-		<salesforce:query-all doc:name="Query all" doc:id="29d70a1c-bc91-4412-8e88-200d3f606a92" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query all" doc:id="29d70a1c-bc91-4412-8e88-200d3f606a92" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT Amount__c,ContactId, Contact.name, Contact.email, Contact.phone , 
 Description, Discount, EndDate, External_ID__c,GrandTotal, Status, Subject, Subtotal, Tax, Work_End__c, 
 WorkOrderNumber, Work_Order_Type__c, Work_Start__c, 
@@ -148,7 +148,7 @@ WorkTypeId, WorkType.Description, WorkType.DurationType, WorkType.Type__c, WorkT
 WorkType.ProductId, WorkType.Product.Description
 FROM WorkOrder
 ]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="6a48f965-bd67-4936-84fe-42016e606b2c" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -160,11 +160,11 @@ payload]]></ee:set-payload>
 	</flow>
 	<flow name="loyalty-get-member-tiers" doc:id="44ce114d-beaf-4438-b3e7-22ef25e9a063" >
 		<http:listener doc:name="GET /members/tiers" doc:id="4eb3d331-06b6-4cb7-9f6c-92c0fa4c78c4" config-ref="HTTP_Listener_config" path="/members/tiers" />
-		<salesforce:query-all doc:name="Query all" doc:id="cd1b0065-8e13-4224-b7f3-0481c08e1a7e" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query all" doc:id="cd1b0065-8e13-4224-b7f3-0481c08e1a7e" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT LoyaltyMemberId, id, Name, External_ID__c, TierMemberIdentifier
 From LoyaltyMemberTier 
 ]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="3d6c8d5d-3835-4f1d-b7f6-c74b7df27ac9" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -176,7 +176,7 @@ payload]]></ee:set-payload>
 	</flow>
 	<flow name="loyalty-get-member-transactions" doc:id="a0db846f-79f1-427a-9d8c-2298acec8c07" >
 		<http:listener doc:name="GET /members/transactions/{id}" doc:id="868d890e-57e7-493b-8756-a335ea61c7c1" config-ref="HTTP_Listener_config" path="/members/transactions/{id}" />
-		<salesforce:query-all doc:name="Query Transactions by Member Id" doc:id="0d6c6124-645a-4c58-aa40-4e11f0c69dc6" config-ref="Salesforce_Config" >
+		<salesforce:query doc:name="Query Transactions by Member Id" doc:id="0d6c6124-645a-4c58-aa40-4e11f0c69dc6" config-ref="Salesforce_Config" >
 			<salesforce:salesforce-query ><![CDATA[SELECT MemberId, LoyaltyProgramId, LoyaltyProgram.Name, JournalTypeId, JournalType.Name, JournalSubTypeId, JournalSubType.Name, JournalReason, JournalDate, EscrowPointsCreditDate, Channel, Comment,
 ProductId , Product.Name, ProductCategoryId , ProductCategory.Name, Brand, Points_to_Redeem__c , PaymentMethod , ActivityDate, Status, Reward_Catalog__c, Quantity, QuantityUnitOfMeasureId, Establishment
 FROM TransactionJournal 
@@ -186,7 +186,7 @@ WHERE MemberId = ':id']]></salesforce:salesforce-query>
 {
 	"id" : attributes.uriParams.id
 }]]]></salesforce:parameters>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="fc6c8cae-760f-4633-b534-427bbba48ed0" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -207,7 +207,7 @@ where id = :id]]></db:sql>
 }]]]></db:input-parameters>
 		</db:select>
 		<set-variable value="#[payload[0].sf_id]" doc:name="Set sf_member_id" doc:id="c61115d8-0267-4e71-a702-6d87bd4f854a" variableName="sf_member_id" />
-		<salesforce:query-all doc:name="Get Vouchers By Member" doc:id="427f6144-b696-40fa-a5ba-f27f3b39fc05" config-ref="Salesforce_Config">
+		<salesforce:query doc:name="Get Vouchers By Member" doc:id="427f6144-b696-40fa-a5ba-f27f3b39fc05" config-ref="Salesforce_Config">
 			<salesforce:salesforce-query><![CDATA[select Id, Name, IsDeleted, CreatedDate, ExpirationDate ,LastModifiedDate, 
 DiscountPercent, PromotionId, Reason, RedeemedValue, RemainingValue, ReservationKey, ReservedValue,LoyaltyProgramMemberId,
 Status, TransactionJournalId, UseDate, VoucherCode,
@@ -220,7 +220,7 @@ where LoyaltyProgramMemberId = ':id']]></salesforce:salesforce-query>
 			<salesforce:parameters><![CDATA[#[{
 	id: vars.sf_member_id
 }]]]></salesforce:parameters>
-		</salesforce:query-all>
+		</salesforce:query>
 		<logger level="INFO" doc:name="Logger1" doc:id="daa3219b-160f-492a-af92-fdd394949c3c" message="Getting vouchers for CustomerID:#[vars.member] - #[attributes.queryParams.member] with SF ID: #[vars.sf_member_id]" />
 		<ee:transform doc:name="Transform Message" doc:id="d04d9b97-bd33-41bd-8a47-c3f680944fbd">
 			<ee:message>

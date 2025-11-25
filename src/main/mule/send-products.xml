@@ -27,8 +27,8 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
                       allowedMethods="POST"/>
         
         <!-- Initialize Variables -->
-        <set-variable value="#[if (!isEmpty(attributes.product)) attributes.product else attributes.queryParams.product]" variableName="productId" doc:name="Set Product ID"/>
-        <logger level="INFO" doc:name="Logger" doc:id="fe88c61a-c6fd-4b1d-b570-6e77f7d88606" message="loyalty-products-send Sendig product #[vars.productId] to Salesforce"/>
+        <set-variable value="#[payload]" doc:name="Set Products" doc:id="14eb8b13-d94c-4afc-8c2f-e13c96dfe3b5" variableName="products"/>
+		<logger level="INFO" doc:name="Logger" doc:id="fe88c61a-c6fd-4b1d-b570-6e77f7d88606" message="loyalty-products-send Sending [ #[vars.products.products] ] products to Salesforce"/>
 		<set-variable value="#[{}]" variableName="processingSummary" doc:name="Initialize Summary"/>
         <set-variable value="#[0]" variableName="successCount" doc:name="Initialize Success Count"/>
         <set-variable value="#[0]" variableName="updateCount" doc:name="Initialize Update Count"/>
@@ -40,32 +40,23 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
         <set-variable value="#[payload]" variableName="existingCatalogs" doc:name="Store Catalogs"/>
         
         <!-- Determine Processing Mode -->
-        <choice doc:name="Single Product or Batch?">
+        <choice doc:name="Product Found?">
+                    <when expression="#[sizeOf(payload) &gt; 0]">
+				<logger level="WARN" doc:name="Product Not Found" message="Product with ID #[vars.productId] not found or inactive" />
+				<set-variable value="#[vars.failures ++ [{productId: vars.productId, error: 'Product not found or inactive'}]]" variableName="failures" />
+				<set-variable value="#[vars.failureCount + 1]" variableName="failureCount" />
+                    </when>
+                </choice>
+		<choice doc:name="Single Product or Batch?">
             <!-- Single Product Processing -->
-            <when expression="#[vars.productId != null and vars.productId != '' and vars.productId != 'null']">
+            <when expression='#[((sizeOf(vars.products.products) == 1) and (vars.products.syncType == "single_product"))]'>
                 <logger level="INFO" doc:name="Log Single Product" message="Processing single product ID: #[vars.productId]"/>
                 
                 <!-- Get Single Product from Database -->
-                <db:select doc:name="Get Single Product" doc:id="64cbe8a3-5da4-4293-8517-698117a43e38" config-ref="Database_Config">
-                    <db:sql><![CDATA[SELECT * FROM products 
-WHERE id = :productId AND is_active = true
-                    ]]></db:sql>
-					<db:input-parameters ><![CDATA[#[{
-	productId: vars.productId
-}]]]></db:input-parameters>
-                </db:select>
                 
                 <!-- Process Single Product -->
-                <choice doc:name="Product Found?">
-                    <when expression="#[sizeOf(payload) > 0]">
-                        <flow-ref doc:name="Process Product" doc:id="089af012-90e7-47b1-91cc-cb70f47422e6" name="process-product-subflow"/>
-                    </when>
-                    <otherwise>
-                        <logger level="WARN" doc:name="Product Not Found" message="Product with ID #[vars.productId] not found or inactive"/>
-                        <set-variable value="#[vars.failures ++ [{productId: vars.productId, error: 'Product not found or inactive'}]]" variableName="failures"/>
-                        <set-variable value="#[vars.failureCount + 1]" variableName="failureCount"/>
-                    </otherwise>
-                </choice>
+                <set-payload value="#[vars.products.products[0]]" doc:name="Set Payload" doc:id="6e4b43bb-ef5e-4b2a-a0fc-89d22cd0226a" />
+				<flow-ref doc:name="Process Product" doc:id="089af012-90e7-47b1-91cc-cb70f47422e6" name="process-product-subflow" />
             </when>
             
             <!-- Batch Processing -->
@@ -73,16 +64,9 @@ WHERE id = :productId AND is_active = true
                 <logger level="INFO" doc:name="Log Batch Processing" message="Processing all active products in batches"/>
                 
                 <!-- Get All Active Products -->
-                <db:select doc:name="Get All Active Products" doc:id="94a13c0c-0b38-4d61-b41e-a73db6d1c658" config-ref="Database_Config">
-                    <db:sql><![CDATA[SELECT *
-FROM products 
-WHERE is_active = true 
-ORDER BY id
-]]></db:sql>
-                </db:select>
                 
                 <!-- Process Each Product -->
-                <foreach doc:name="For Each Product" doc:id="27c9162a-b1eb-4fd8-aa8a-a31fd4aa5d0b" collection="#[payload]">
+                <foreach doc:name="For Each Product" doc:id="27c9162a-b1eb-4fd8-aa8a-a31fd4aa5d0b" collection="#[vars.products.products]">
                     <flow-ref doc:name="Process Product" doc:id="d82f0f68-5541-4458-beee-dccb3a152229" name="process-product-subflow"/>
                 </foreach>
             </otherwise>

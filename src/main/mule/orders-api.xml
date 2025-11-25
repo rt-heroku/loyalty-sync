@@ -565,13 +565,13 @@ output application/java
 		<choice doc:name="Choice" doc:id="c5cb1330-87b1-4dde-a4f7-1156d26dac42" >
 			<when expression="#[vars.hasItems]">
 				<logger level="INFO" doc:name="Logger" doc:id="0f89299e-4a39-4be3-a85a-690bbdd48c04" message="About to create#[sizeOf(vars.orderItems)] OrderItems for Order - #[vars.originalOrder.order_number] ... "/>
-				<salesforce:query-all doc:name="Get All PriceBookEntries for PriceBook" doc:id="55b12ff0-41a9-42b4-9969-62d5e94d9c4e" config-ref="Salesforce_Config" target="priceBookEntries">
+				<salesforce:query doc:name="Get All PriceBookEntries for PriceBook" doc:id="55b12ff0-41a9-42b4-9969-62d5e94d9c4e" config-ref="Salesforce_Config" target="priceBookEntries">
 			<salesforce:salesforce-query><![CDATA[select Id, Product2Id from PriceBookEntry 
 where PriceBook2Id = ':id']]></salesforce:salesforce-query>
 			<salesforce:parameters><![CDATA[#[{
 	id: vars.priceBookId
 }]]]></salesforce:parameters>
-		</salesforce:query-all>
+		</salesforce:query>
 				<ee:transform doc:name="Set all Salesforce Order Items" doc:id="23e02a53-5606-4d17-8907-740531746628">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0

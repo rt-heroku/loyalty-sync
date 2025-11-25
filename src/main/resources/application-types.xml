@@ -2531,6 +2531,16 @@ type auto_00c436b2_c630_4725_8e27_4ee3cd9de341_Output_Variables_loyaltyMember = 
 
 ]]></types:shape>
     </types:type>
+    <types:type name="Send_Products" format="json">
+      <types:shape format="weave" example="examples/SendProductsToSalesforce.json"><![CDATA[%dw 2.0
+
+type Send_Products = {|
+  products: Array<{|    id: Number {"typeId": "int"},     name: String,     sku: String,     price: Number {"typeId": "double"},     category: String,     product_type: String,     brand: String,     collection: String,     material: String,     color: String,     description: String,     dimensions: String,     weight: Number {"typeId": "double"},     warranty_info: String,     care_instructions: String,     main_image_url: String,     is_active: Boolean,     featured: Boolean,     stock: Number {"typeId": "int"}  |}>, 
+  syncType: String
+|} {"example": "{\\\"products\\\":[{\\\"id\\\":123,\\\"name\\\":\\\"Product Name\\\",\\\"sku\\\":\\\"SKU-001\\\",\\\"price\\\":99.99,\\\"category\\\":\\\"Category\\\",\\\"product_type\\\":\\\"Type\\\",\\\"brand\\\":\\\"Brand Name\\\",\\\"collection\\\":\\\"Collection\\\",\\\"material\\\":\\\"Material\\\",\\\"color\\\":\\\"Color\\\",\\\"description\\\":\\\"Description\\\",\\\"dimensions\\\":\\\"10x10x10\\\",\\\"weight\\\":5.5,\\\"warranty_info\\\":\\\"1 year\\\",\\\"care_instructions\\\":\\\"Care info\\\",\\\"main_image_url\\\":\\\"https:\\/\\/...\\\",\\\"is_active\\\":true,\\\"featured\\\":false,\\\"stock\\\":50}],\\\"syncType\\\":\\\"single_product\\\"}"}
+
+]]></types:shape>
+    </types:type>
   </types:catalog>
   <types:enrichment select="#043df3cb-6dd0-4d78-85c9-79576cf32a31">
     <types:processor-declaration>
@@ -2897,6 +2907,15 @@ type auto_00c436b2_c630_4725_8e27_4ee3cd9de341_Output_Variables_loyaltyMember = 
           <types:variable name="customerId" type="auto_00c436b2-c630-4725-8e27-4ee3cd9de341_Output-Variables-customerId"/>
           <types:variable name="loyaltyMember" type="auto_00c436b2-c630-4725-8e27-4ee3cd9de341_Output-Variables-loyaltyMember"/>
         </types:variables>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#9d3ad4d2-8f94-4e74-a91b-c744013dc2d6">
+    <types:processor-declaration>
+      <types:output-event>
+        <types:message>
+          <types:payload type="Send_Products"/>
+        </types:message>
       </types:output-event>
     </types:processor-declaration>
   </types:enrichment>

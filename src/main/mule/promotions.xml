@@ -11,10 +11,14 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/salesforce-pub-sub http://www.mulesoft.org/schema/mule/salesforce-pub-sub/current/mule-salesforce-pub-sub.xsd
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
 	<flow name="promotionsFlow" doc:id="46263fff-8492-4ca5-a6e4-519d58b495a3" >
-		<http:listener doc:name="GET /promotions/salesforce" doc:id="8557b1a3-9259-4bb8-b589-26d2789dd07c" config-ref="HTTP_Listener_config" path="/promotions/salesforce"/>
+		<http:listener doc:name="GET /loyalty/promotions/program" doc:id="8557b1a3-9259-4bb8-b589-26d2789dd07c" config-ref="HTTP_Listener_config" path="/loyalty/promotions/program"/>
 		<salesforce:query doc:name="Get All Promotions" doc:id="4357f234-3b9f-422c-befe-7f03c81bfcf7" config-ref="Salesforce_Config">
-			<salesforce:salesforce-query ><![CDATA[select id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, EnrollmentEndDate , IsEnrollmentRequired, EnrollmentStartDate, ImageUrl, LoyaltyProgramId, LoyaltyProgramCurrencyId, PointFactor, PromotionCode, PromotionPageUrl, TotalRewardPoints, StartDate, StartDateTime, EndDate, EndDateTime, UsageType, TransactionJournalType, IssuedVoucherCount, TermsAndConditions
-from Promotion ]]></salesforce:salesforce-query>
+			<salesforce:salesforce-query ><![CDATA[SELECT id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, 
+        EnrollmentEndDate, IsEnrollmentRequired, EnrollmentStartDate, ImageUrl, LoyaltyProgramId, LoyaltyProgramCurrencyId, 
+        PointFactor, PromotionCode, PromotionPageUrl, TotalRewardPoints, StartDate, StartDateTime, EndDate, EndDateTime, 
+        UsageType, TransactionJournalType, IssuedVoucherCount, TermsAndConditions, External_ID__c
+FROM Promotion
+WHERE LoyaltyProgramId = ':id']]></salesforce:salesforce-query>
 		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="f310606d-e2b8-42db-bf3b-55103617335c" >
 			<ee:message >
@@ -59,7 +63,7 @@ output application/json
 		</ee:transform>
 	</flow>
 	<flow name="get-customer-promotions-and-update-pos" doc:id="730ad270-6bec-4173-ad26-13566882ce5f" >
-		<http:listener doc:name="GET /members/promotions/{id}" doc:id="37c8b4b3-3cf8-4c5f-aada-ae6ce527caaf" config-ref="HTTP_Listener_config" path="/members/promotions/{id}"/>
+		<http:listener doc:name="GET  /loyalty/members/{id}/promotions" doc:id="37c8b4b3-3cf8-4c5f-aada-ae6ce527caaf" config-ref="HTTP_Listener_config" path="/loyalty/members/{id}/promotions"/>
 		<logger level="INFO" doc:name="Logger" doc:id="a39256f4-7be0-4942-8c4e-302a92fbbd39" message="Getting Promotions for customer with Id = #[attributes.uriParams.id]"/>
 		<salesforce:query doc:name="Query" doc:id="bcf669f8-8756-4471-942d-508bde43a870" config-ref="Salesforce_Config">
 			<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, IsAutoEnrolled, CumulativeUsageCompletePercent, CumulativeUsageCompleted, CumulativeUsageTarget, IsEnrollmentActive, LoyaltyProgramMember.Id, 
@@ -74,6 +78,7 @@ Where LoyaltyProgramMember.External_ID__c = ':id']]></salesforce:salesforce-quer
 	id: attributes.uriParams.id
 }]]]></salesforce:parameters>
 		</salesforce:query>
+		<validation:validate-size doc:name="Validate size" doc:id="bae51bd2-9da2-42bb-b339-c87a6652d27c" config-ref="Validation_Config" value="#[payload]" min="1" message="Customer not found" />
 		<ee:transform doc:name="Transform Message" doc:id="1b49e6aa-db5b-4b3a-9eca-8a5ce72d3654" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -127,10 +132,10 @@ output application/json
 			is_enrollment_required: $.IsEnrollmentRequired == "true",
 			enrollment_start_date: $.EnrollmentStartDate,
 			enrollment_end_date: $.EnrollmentEndDate,
-			start_date: $.StartDate  as Date {format: "yyyy-MM-dd"} ,
-			start_date_time: $.StartDateTime as DateTime  as String {format: "yyyy-MM-dd HH:mm:ss.SSS"},
-			end_date: $.EndDate as Date {format: "yyyy-MM-dd"} ,
-			end_date_time: $.EndDateTime as DateTime  as String {format: "yyyy-MM-dd HH:mm:ss.SSS"},
+			start_date: if (!isEmpty($.StartDate)) $.StartDate  as Date {format: "yyyy-MM-dd"} else null,
+			start_date_time: if (!isEmpty($.StartDateTime)) $.StartDateTime as DateTime  as String {format: "yyyy-MM-dd HH:mm:ss.SSS"} else null,
+			end_date: if (!isEmpty($.EndDate)) $.EndDate as Date {format: "yyyy-MM-dd"} else null ,
+			end_date_time: if (!isEmpty($.EndDateTime)) $.EndDateTime as DateTime  as String {format: "yyyy-MM-dd HH:mm:ss.SSS"} else null,
 			image_url: $.ImageUrl,
 			promotion_page_url: $.PromotionPageUrl,
 			loyalty_program_id: $.LoyaltyProgramId,
@@ -174,11 +179,14 @@ vars.promotions]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="promotionsFlow1" doc:id="6bf84345-3cf3-4401-a99d-7815216950f1" >
-		<http:listener doc:name="GET /promotions/salesforce/{id}" doc:id="d226162e-234f-4a25-923a-d9c9736784ce" config-ref="HTTP_Listener_config" path="/promotions/salesforce/{id}"/>
+		<http:listener doc:name="GET /loyalty/promotions/{id}" doc:id="d226162e-234f-4a25-923a-d9c9736784ce" config-ref="HTTP_Listener_config" path="/loyalty/promotions/{id}"/>
 		<salesforce:query doc:name="Get all promotions by SF ID" doc:id="a84b4878-6ce8-45b3-952e-d3149f77a379" config-ref="Salesforce_Config">
-			<salesforce:salesforce-query ><![CDATA[select id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, EnrollmentEndDate , IsEnrollmentRequired, EnrollmentStartDate, ImageUrl, LoyaltyProgramId, LoyaltyProgramCurrencyId, PointFactor, PromotionCode, PromotionPageUrl, TotalRewardPoints, StartDate, StartDateTime, EndDate, EndDateTime, UsageType, TransactionJournalType, IssuedVoucherCount, TermsAndConditions
-from Promotion 
-where id = ':id']]></salesforce:salesforce-query>
+			<salesforce:salesforce-query ><![CDATA[SELECT id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, 
+        EnrollmentEndDate, IsEnrollmentRequired, EnrollmentStartDate, ImageUrl, LoyaltyProgramId, LoyaltyProgramCurrencyId, 
+        PointFactor, PromotionCode, PromotionPageUrl, TotalRewardPoints, StartDate, StartDateTime, EndDate, EndDateTime, 
+        UsageType, TransactionJournalType, IssuedVoucherCount, TermsAndConditions, External_ID__c
+        from Promotion
+WHERE id = ':id']]></salesforce:salesforce-query>
 			<salesforce:parameters ><![CDATA[#[{
 	id: attributes.uriParams.id
 }]]]></salesforce:parameters>
@@ -229,7 +237,7 @@ output application/json
 
   <!-- Flow 1: Get All promotions from Salesforce -->
   <flow name="get-all-promotions-from-salesforce" doc:id="d32e0e06-3c45-4331-8825-c657b599ba3b">
-    <http:listener doc:name="GET /promotions/salesforce" doc:id="4b4799d7-437b-4285-967a-3b58ecd3ddf3" config-ref="HTTP_Listener_config" path="/promotions/salesforce" allowedMethods="GET" />
+    <http:listener doc:name="GET /loyalty/promotions" doc:id="4b4799d7-437b-4285-967a-3b58ecd3ddf3" config-ref="HTTP_Listener_config" path="/loyalty/promotions" allowedMethods="GET" />
     <logger level="INFO" doc:name="Log Start" doc:id="a0ffab42-6e1a-4180-80ee-3a95794964bc" message="Starting to fetch all promotions from Salesforce" />
 
     <salesforce:query doc:name="Query Promotions from Salesforce" doc:id="9f6badf3-a394-4024-9ba9-f3f583b7f92b" config-ref="Salesforce_Config">
@@ -293,20 +301,21 @@ output application/json
 
   <!-- Flow 2: Sync promotions from Salesforce to Database -->
   <flow name="sync-promotions-salesforce-to-database" doc:id="5d03adf0-f1ed-4749-b159-1fa4007ea9c0">
-    <http:listener doc:name="POST /promotions/sync/sf-to-db" doc:id="9a9fbae6-6187-4ff6-b29d-a5e0bf6f40f8" config-ref="HTTP_Listener_config" path="/promotions/sync/sf-to-db" allowedMethods="POST" />
+    <http:listener doc:name="POST /loyalty/promotions/program/{id}/sync" doc:id="9a9fbae6-6187-4ff6-b29d-a5e0bf6f40f8" config-ref="HTTP_Listener_config" path="/loyalty/promotions/program/{id}/sync" allowedMethods="POST" />
     <logger level="INFO" doc:name="Log Start Sync" doc:id="d2e25e5a-0a05-405e-8aa0-d75c039e1eef" message="Starting sync from Salesforce to Database" />
 
     <!-- Get all promotions from Salesforce -->
-    <salesforce:query doc:name="Query All Promotions" doc:id="21ad14d3-f2a9-44c5-a3fd-b7fa747162a7" config-ref="Salesforce_Config">
-      <salesforce:salesforce-query>
-        <![CDATA[
-        select id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, 
+    <salesforce:query doc:name="Query All Promotions by Program Id" doc:id="21ad14d3-f2a9-44c5-a3fd-b7fa747162a7" config-ref="Salesforce_Config">
+      <salesforce:salesforce-query><![CDATA[SELECT id, Name, IsActive, IsAutomatic, CurrencyIsoCode, Description, Objective, DiscountOrder, DisplayName, 
         EnrollmentEndDate, IsEnrollmentRequired, EnrollmentStartDate, ImageUrl, LoyaltyProgramId, LoyaltyProgramCurrencyId, 
         PointFactor, PromotionCode, PromotionPageUrl, TotalRewardPoints, StartDate, StartDateTime, EndDate, EndDateTime, 
         UsageType, TransactionJournalType, IssuedVoucherCount, TermsAndConditions, External_ID__c
         from Promotion
-        ]]>
+WHERE LoyaltyProgramId = ':id']]>
       </salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[{
+	id: attributes.uriParams.id
+}]]]></salesforce:parameters>
     </salesforce:query>
 
     <set-variable value="#[payload]" doc:name="Store SF Promotions" doc:id="09f8bb29-517b-4fc8-8a1b-ea989dfa0c3e" variableName="sfPromotions" />
@@ -316,22 +325,21 @@ output application/json
     <foreach doc:name="For Each Promotion" doc:id="48db2a92-dab3-448d-bb96-ea47c93704fb" collection="#[vars.sfPromotions]">
       <try doc:name="Try Insert/Update" doc:id="9e7a33a8-2625-417d-b69f-51be3e436e5b">
         <!-- Check if promotion exists in database -->
-        <db:select doc:name="Check Existing Promotion" doc:id="1463f4df-d7d5-4abc-8a05-b89807209b75" config-ref="Database_Config">
-          <db:sql>SELECT id FROM promotions WHERE sf_id = :sf_id</db:sql>
-          <db:input-parameters>
-            <![CDATA[#[{
+        <logger level="INFO" doc:name="Logger" doc:id="6cc9ab73-b02f-46a6-8750-af14971a138a" message="#[vars.rootMessage.payload]"/>
+				<set-variable value='#[%dw 2.0&#10;output application/json&#10;&#10;fun mapDiscountOrder(order) = order match {&#10;  case "MostExpensive" -&gt; 1&#10;  case "LeastExpensive" -&gt; 2&#10;  case "First" -&gt; 3&#10;  case "Last" -&gt; 4&#10;  else -&gt; null&#10;}&#10;---&#10;{&#10;  sf_id: payload.Id,&#10;  name: payload.Name,&#10;  display_name: payload.DisplayName,&#10;  is_active: payload.IsActive as Boolean default false,&#10;  is_automatic: payload.IsAutomatic as Boolean default false,&#10;  currency_iso_code: payload.CurrencyIsoCode default "USD",&#10;  description: payload.Description,&#10;  objective: payload.Objective,&#10;  discount_order: mapDiscountOrder(payload.DiscountOrder),&#10;  is_enrollment_required: payload.IsEnrollmentRequired as Boolean default false,&#10;  enrollment_start_date: if (payload.EnrollmentStartDate != null) payload.EnrollmentStartDate as DateTime as String {format: "yyyy-MM-dd HH:mm:ss"} else null,&#10;  enrollment_end_date: if (payload.EnrollmentEndDate != null) payload.EnrollmentEndDate as DateTime as String  {format: "yyyy-MM-dd HH:mm:ss"} else null,&#10;  start_date: if (payload.StartDate != null) payload.StartDate as Date {format: "yyyy-MM-dd"} else null,&#10;  start_date_time: if (payload.StartDateTime != null) payload.StartDateTime as DateTime as String {format: "yyyy-MM-dd HH:mm:ss"} else null,&#10;  end_date: if (payload.EndDate != null) payload.EndDate as Date {format: "yyyy-MM-dd"} else null,&#10;  end_date_time: if (payload.EndDateTime != null) payload.EndDateTime as DateTime as String {format: "yyyy-MM-dd HH:mm:ss.SSS"} else null,&#10;  image_url: payload.ImageUrl,&#10;  promotion_page_url: payload.PromotionPageUrl,&#10;  loyalty_program_id: payload.LoyaltyProgramId,&#10;  loyalty_program_currency_id: payload.LoyaltyProgramCurrencyId,&#10;  point_factor: if (payload.PointFactor != null) payload.PointFactor as Number else null,&#10;  total_reward_points: if (payload.TotalRewardPoints != null) payload.TotalRewardPoints as Number else null,&#10;  promotion_code: payload.PromotionCode,&#10;  usage_type: payload.UsageType,&#10;  transaction_journal_type: payload.TransactionJournalType,&#10;  issued_voucher_count: if (payload.IssuedVoucherCount != null) payload.IssuedVoucherCount as Number else null,&#10;  terms_and_conditions: payload.TermsAndConditions&#10;}]' doc:name="Set Promotion" doc:id="f4da6f3e-bfdc-4faf-a180-dee51e3f8200" variableName="promotion"/>
+				<db:select doc:name="Check Existing Promotion" doc:id="1463f4df-d7d5-4abc-8a05-b89807209b75" config-ref="Database_Config">
+          <db:sql><![CDATA[SELECT id FROM promotions WHERE sf_id = :sf_id]]></db:sql>
+          <db:input-parameters><![CDATA[#[{
             sf_id: payload.Id
-          }]]]>
+}]]]>
           </db:input-parameters>
         </db:select>
 
         <choice doc:name="Insert or Update" doc:id="47c286e2-1bba-47ad-a190-e15433b9a043">
           <when expression="#[sizeOf(payload) == 0]">
             <!-- Insert new promotion -->
-            <db:insert doc:name="Insert New Promotion" doc:id="69c3b430-a2bd-4b24-9736-8a68268f593b" config-ref="Database_Config">
-              <db:sql>
-                <![CDATA[
-                INSERT INTO promotions (
+            <db:insert doc:name="Insert New Promotion" doc:id="69c3b430-a2bd-4b24-9736-8a68268f593b" config-ref="Database_Config" autoGenerateKeys="true">
+              <db:sql><![CDATA[                INSERT INTO promotions (
                   sf_id, name, display_name, is_active, is_automatic, currency_iso_code, description, objective, 
                   discount_order, is_enrollment_required, enrollment_start_date, enrollment_end_date, 
                   start_date, start_date_time, end_date, end_date_time, image_url, promotion_page_url, 
@@ -348,43 +356,14 @@ output application/json
                 ) RETURNING id
               ]]>
               </db:sql>
-              <db:input-parameters>
-                <![CDATA[#[{
-                sf_id: vars.rootMessage.Id,
-                name: vars.rootMessage.Name,
-                display_name: vars.rootMessage.DisplayName,
-                is_active: vars.rootMessage.IsActive default false,
-                is_automatic: vars.rootMessage.IsAutomatic default false,
-                currency_iso_code: vars.rootMessage.CurrencyIsoCode default "USD",
-                description: vars.rootMessage.Description,
-                objective: vars.rootMessage.Objective,
-                discount_order: vars.rootMessage.DiscountOrder,
-                is_enrollment_required: vars.rootMessage.IsEnrollmentRequired default false,
-                enrollment_start_date: vars.rootMessage.EnrollmentStartDate,
-                enrollment_end_date: vars.rootMessage.EnrollmentEndDate,
-                start_date: vars.rootMessage.StartDate,
-                start_date_time: vars.rootMessage.StartDateTime,
-                end_date: vars.rootMessage.EndDate,
-                end_date_time: vars.rootMessage.EndDateTime,
-                image_url: vars.rootMessage.ImageUrl,
-                promotion_page_url: vars.rootMessage.PromotionPageUrl,
-                loyalty_program_id: vars.rootMessage.LoyaltyProgramId,
-                loyalty_program_currency_id: vars.rootMessage.LoyaltyProgramCurrencyId,
-                point_factor: vars.rootMessage.PointFactor,
-                total_reward_points: vars.rootMessage.TotalRewardPoints,
-                promotion_code: vars.rootMessage.PromotionCode,
-                usage_type: vars.rootMessage.UsageType,
-                transaction_journal_type: vars.rootMessage.TransactionJournalType,
-                issued_voucher_count: vars.rootMessage.IssuedVoucherCount default 0,
-                terms_and_conditions: vars.rootMessage.TermsAndConditions
-              }]]]>
+              <db:input-parameters><![CDATA[#[vars.promotion]]]>
               </db:input-parameters>
             </db:insert>
 
             <!-- Update Salesforce with database ID -->
             <salesforce:update doc:name="Update SF External ID" doc:id="a1762675-7e32-46ea-8e05-689105edd2f9" config-ref="Salesforce_Config" type="Promotion">
               <salesforce:records><![CDATA[#[{
-                Id: vars.rootMessage.Id,
+                Id: vars.promotion.Id,
                 External_ID__c: payload[0].id as String
               }]]]>
               </salesforce:records>
@@ -395,8 +374,7 @@ output application/json
           <otherwise>
             <!-- Update existing promotion -->
             <db:update doc:name="Update Existing Promotion" doc:id="614105f4-2f31-43e2-9a4e-d3bf9b285140" config-ref="Database_Config">
-              <db:sql>
-                <![CDATA[
+              <db:sql><![CDATA[
                 UPDATE promotions SET 
                   name = :name, display_name = :display_name, is_active = :is_active, is_automatic = :is_automatic,
                   currency_iso_code = :currency_iso_code, description = :description, objective = :objective,
@@ -413,36 +391,7 @@ output application/json
                 WHERE sf_id = :sf_id
               ]]>
               </db:sql>
-              <db:input-parameters>
-                <![CDATA[#[{
-                sf_id: vars.rootMessage.Id,
-                name: vars.rootMessage.Name,
-                display_name: vars.rootMessage.DisplayName,
-                is_active: vars.rootMessage.IsActive default false,
-                is_automatic: vars.rootMessage.IsAutomatic default false,
-                currency_iso_code: vars.rootMessage.CurrencyIsoCode default "USD",
-                description: vars.rootMessage.Description,
-                objective: vars.rootMessage.Objective,
-                discount_order: vars.rootMessage.DiscountOrder,
-                is_enrollment_required: vars.rootMessage.IsEnrollmentRequired default false,
-                enrollment_start_date: vars.rootMessage.EnrollmentStartDate,
-                enrollment_end_date: vars.rootMessage.EnrollmentEndDate,
-                start_date: vars.rootMessage.StartDate,
-                start_date_time: vars.rootMessage.StartDateTime,
-                end_date: vars.rootMessage.EndDate,
-                end_date_time: vars.rootMessage.EndDateTime,
-                image_url: vars.rootMessage.ImageUrl,
-                promotion_page_url: vars.rootMessage.PromotionPageUrl,
-                loyalty_program_id: vars.rootMessage.LoyaltyProgramId,
-                loyalty_program_currency_id: vars.rootMessage.LoyaltyProgramCurrencyId,
-                point_factor: vars.rootMessage.PointFactor,
-                total_reward_points: vars.rootMessage.TotalRewardPoints,
-                promotion_code: vars.rootMessage.PromotionCode,
-                usage_type: vars.rootMessage.UsageType,
-                transaction_journal_type: vars.rootMessage.TransactionJournalType,
-                issued_voucher_count: vars.rootMessage.IssuedVoucherCount default 0,
-                terms_and_conditions: vars.rootMessage.TermsAndConditions
-              }]]]>
+              <db:input-parameters><![CDATA[#[vars.promotion]]]>
               </db:input-parameters>
             </db:update>
 
@@ -523,7 +472,7 @@ output application/json
 
   <!-- Flow 3: Create Salesforce promotion -->
   <flow name="create-salesforce-promotion" doc:id="ae209091-d3cd-49f5-8a53-1f58cd7a1137">
-    <http:listener doc:name="POST /promotions/salesforce" doc:id="7e082ea4-5b88-4b29-a27f-970089b88ab8" config-ref="HTTP_Listener_config" path="/promotions/salesforce" allowedMethods="POST" />
+    <http:listener doc:name="POST /pos/promotions/salesforce" doc:id="7e082ea4-5b88-4b29-a27f-970089b88ab8" config-ref="HTTP_Listener_config" path="/pos/promotions/salesforce" allowedMethods="POST" />
     <logger level="INFO" doc:name="Log Start Create" doc:id="1a0aa5fd-0345-4d51-bffc-e36337b31dbc" message="Starting to create promotion in Salesforce" />
 
     <set-variable value="#[payload]" doc:name="Store Original Payload" doc:id="01c675f6-d2cc-4783-88c3-ea865bd6d4db" variableName="originalPayload" />

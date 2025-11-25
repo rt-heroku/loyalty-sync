@@ -263,7 +263,7 @@ from ProductCategoryProduct
 		</salesforce:query>
 			</when>
 			<when expression="#[!isEmpty(attributes.queryParams.prod)]">
-				<salesforce:query-all doc:name="Select Products by ID" doc:id="c4c5330a-86d2-4363-9c5b-6f855987263b" config-ref="Salesforce_Config">
+				<salesforce:query doc:name="Select Products by ID" doc:id="c4c5330a-86d2-4363-9c5b-6f855987263b" config-ref="Salesforce_Config">
 					<salesforce:salesforce-query ><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
 ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
 ProductId , Product.Id, Product.Name, 
@@ -276,10 +276,10 @@ WHERE ProductId = ':prod']]></salesforce:salesforce-query>
 					<salesforce:parameters ><![CDATA[#[{
 	prod: attributes.queryParams.prod
 }]]]></salesforce:parameters>
-				</salesforce:query-all>
+				</salesforce:query>
 			</when>
 			<otherwise >
-				<salesforce:query-all doc:name="Select products by Catalog/Brand" doc:id="f4403bd8-a413-46a0-8ed4-2d7e62413107" config-ref="Salesforce_Config" >
+				<salesforce:query doc:name="Select products by Catalog/Brand" doc:id="f4403bd8-a413-46a0-8ed4-2d7e62413107" config-ref="Salesforce_Config" >
 					<salesforce:salesforce-query ><![CDATA[select id, name, ProductCategory.Id, ProductCategory.Name,IsPrimaryCategory, 
 ProductCategory.Catalog.Id, ProductCategory.Catalog.name, 
 ProductId , Product.Id, Product.Name, 
@@ -298,7 +298,7 @@ where catalogid = ':catalogid'
 {
 	"catalogid" : vars.catalog
 }]]]></salesforce:parameters>
-				</salesforce:query-all>
+				</salesforce:query>
 			</otherwise>
 		</choice>
 		<ee:transform doc:name="Transform Message" doc:id="63f2564f-51f2-4a5a-937a-ece1ca68d499" >
@@ -358,7 +358,7 @@ payload map (item) -> {
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="29df316d-9c80-483f-a854-27d27a159e5a" variableName="products"/>
 		<set-variable value="#[%dw 2.0&#10;output text/plain&#10;&#10;---&#10;payload.sf_id map (&quot;'&quot; ++ $ ++ &quot;'&quot;) joinBy  &quot;,&quot;]" doc:name="Set Variable" doc:id="f9de15af-857b-480d-99ad-adcd0fc2fa8c" variableName="ids"/>
 		<logger level="INFO" doc:name="Log Ids" doc:id="d65d336c-a565-45d5-85e7-e13e52cabf4d" message="Ids: #{#[vars.ids]"/>
-		<salesforce:query-all doc:name="Get Pricing for all Products" doc:id="d2169d5a-b288-4347-bd4b-4b00c0c26aeb" config-ref="Salesforce_Config" target="pricing">
+		<salesforce:query doc:name="Get Pricing for all Products" doc:id="d2169d5a-b288-4347-bd4b-4b00c0c26aeb" config-ref="Salesforce_Config" target="pricing">
 			<salesforce:salesforce-query ><![CDATA[SELECT 
   Product2Id, IsActive, UnitPrice, UseStandardPrice, 
   Pricebook2Id, Pricebook2.Name, Pricebook2.Description, Pricebook2.IsActive, Pricebook2.IsStandard, 
@@ -370,7 +370,7 @@ WHERE Product2.Id IN (:ids)]]></salesforce:salesforce-query>
 {
 	"ids" : vars.ids
 }]]]></salesforce:parameters>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="660713b4-26a8-456a-802f-80659940a505" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -464,10 +464,10 @@ payload map (item) -> {
 	</flow>
 	<flow name="products-get-catalog" doc:id="178b0303-3860-4567-b4db-831ba6d8bc8e" >
 		<http:listener doc:name="Listener" doc:id="4d282420-2a1d-420c-bf13-c60bb08c30c8" config-ref="HTTP_Listener_config" path="/loyalty/catalogs"/>
-		<salesforce:query-all doc:name="Get all Catalogs" doc:id="4b041de5-5500-407e-8bb3-594b2ed5a95e" config-ref="Salesforce_Config">
+		<salesforce:query doc:name="Get all Catalogs" doc:id="4b041de5-5500-407e-8bb3-594b2ed5a95e" config-ref="Salesforce_Config">
 			<salesforce:salesforce-query ><![CDATA[select id, CatalogType, Code, Description, Name
 from ProductCatalog]]></salesforce:salesforce-query>
-		</salesforce:query-all>
+		</salesforce:query>
 		<ee:transform doc:name="Transform Message" doc:id="1bfe5350-4ccf-4bb9-ab9e-f858a8b6e877" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
